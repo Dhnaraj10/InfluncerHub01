@@ -46,15 +46,7 @@ export const createSponsorship = async (req, res) => {
     // Populate the saved sponsorship with brand and influencer details
     await savedSponsorship.populate({
       path: "brand",
-      select: "name"
-    });
-    
-    await savedSponsorship.populate({
-      path: "brand",
-      populate: {
-        path: "brandProfile",
-        select: "companyName"
-      }
+      select: "name brandProfile"
     });
     
     await savedSponsorship.populate("influencer", "handle");
@@ -68,7 +60,7 @@ export const createSponsorship = async (req, res) => {
 
     res.status(201).json(savedSponsorship);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error creating sponsorship");
     res.status(500).send("Server Error");
   }
 };
@@ -93,14 +85,7 @@ export const getMyBrandSponsorships = async (req, res) => {
     const sponsorships = await Sponsorship.find({ brand: brandProfile._id })
       .populate({
         path: "brand",
-        select: "name"
-      })
-      .populate({
-        path: "brand",
-        populate: {
-          path: "brandProfile",
-          select: "companyName"
-        }
+        select: "name brandProfile"
       })
       .populate("influencer", "handle")
       .sort({ createdAt: -1 });
@@ -119,7 +104,7 @@ export const getMyBrandSponsorships = async (req, res) => {
 
     res.json(transformedSponsorships);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error fetching brand sponsorships");
     res.status(500).send("Server Error");
   }
 };
@@ -149,31 +134,12 @@ export const getOpenSponsorships = async (req, res) => {
         path: "brand",
         select: "name"
       })
-      .populate({
-        path: "brand",
-        populate: {
-          path: "brandProfile",
-          select: "companyName"
-        }
-      })
       .populate("influencer", "handle")
       .sort({ createdAt: -1 });
 
-    // Transform sponsorships to ensure proper brand name is used
-    const transformedSponsorships = sponsorships.map(sponsorship => {
-      const sponsorshipObj = sponsorship.toObject();
-      
-      // Use company name from brand profile if available
-      if (sponsorshipObj.brand && sponsorshipObj.brand.brandProfile && sponsorshipObj.brand.brandProfile.companyName) {
-        sponsorshipObj.brand.name = sponsorshipObj.brand.brandProfile.companyName;
-      }
-      
-      return sponsorshipObj;
-    });
-
-    res.json(transformedSponsorships);
+    res.json(sponsorships);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error fetching open sponsorships");
     res.status(500).send("Server Error");
   }
 };
@@ -200,31 +166,12 @@ export const getMySponsorships = async (req, res) => {
         path: "brand",
         select: "name"
       })
-      .populate({
-        path: "brand",
-        populate: {
-          path: "brandProfile",
-          select: "companyName"
-        }
-      })
       .populate("influencer", "handle")
       .sort({ createdAt: -1 });
 
-    // Transform sponsorships to ensure proper brand name is used
-    const transformedSponsorships = sponsorships.map(sponsorship => {
-      const sponsorshipObj = sponsorship.toObject();
-      
-      // Use company name from brand profile if available
-      if (sponsorshipObj.brand && sponsorshipObj.brand.brandProfile && sponsorshipObj.brand.brandProfile.companyName) {
-        sponsorshipObj.brand.name = sponsorshipObj.brand.brandProfile.companyName;
-      }
-      
-      return sponsorshipObj;
-    });
-
-    res.json(transformedSponsorships);
+    res.json(sponsorships);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error fetching influencer sponsorships");
     res.status(500).send("Server Error");
   }
 };
@@ -268,15 +215,7 @@ export const acceptSponsorship = async (req, res) => {
     // Populate the updated sponsorship with brand and influencer details
     await updatedSponsorship.populate({
       path: "brand",
-      select: "name"
-    });
-    
-    await updatedSponsorship.populate({
-      path: "brand",
-      populate: {
-        path: "brandProfile",
-        select: "companyName"
-      }
+      select: "name brandProfile"
     });
     
     await updatedSponsorship.populate("influencer", "handle");
@@ -293,7 +232,7 @@ export const acceptSponsorship = async (req, res) => {
 
     res.json(updatedSponsorship);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error accepting sponsorship");
     res.status(500).send("Server Error");
   }
 };
@@ -337,15 +276,7 @@ export const rejectSponsorship = async (req, res) => {
     // Populate the updated sponsorship with brand and influencer details
     await updatedSponsorship.populate({
       path: "brand",
-      select: "name"
-    });
-    
-    await updatedSponsorship.populate({
-      path: "brand",
-      populate: {
-        path: "brandProfile",
-        select: "companyName"
-      }
+      select: "name brandProfile"
     });
     
     await updatedSponsorship.populate("influencer", "handle");
@@ -362,7 +293,7 @@ export const rejectSponsorship = async (req, res) => {
 
     res.json(updatedSponsorship);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error rejecting sponsorship");
     res.status(500).send("Server Error");
   }
 };
@@ -406,15 +337,7 @@ export const cancelSponsorship = async (req, res) => {
     // Populate the updated sponsorship with brand and influencer details
     await updatedSponsorship.populate({
       path: "brand",
-      select: "name"
-    });
-    
-    await updatedSponsorship.populate({
-      path: "brand",
-      populate: {
-        path: "brandProfile",
-        select: "companyName"
-      }
+      select: "name brandProfile"
     });
     
     await updatedSponsorship.populate("influencer", "handle");
@@ -431,7 +354,7 @@ export const cancelSponsorship = async (req, res) => {
 
     res.json(updatedSponsorship);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error cancelling sponsorship");
     res.status(500).send("Server Error");
   }
 };
@@ -475,15 +398,7 @@ export const completeSponsorship = async (req, res) => {
     // Populate the updated sponsorship with brand and influencer details
     await updatedSponsorship.populate({
       path: "brand",
-      select: "name"
-    });
-    
-    await updatedSponsorship.populate({
-      path: "brand",
-      populate: {
-        path: "brandProfile",
-        select: "companyName"
-      }
+      select: "name brandProfile"
     });
     
     await updatedSponsorship.populate("influencer", "handle");
@@ -500,7 +415,7 @@ export const completeSponsorship = async (req, res) => {
 
     res.json(updatedSponsorship);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error completing sponsorship");
     res.status(500).send("Server Error");
   }
 };
@@ -519,14 +434,7 @@ export const getRecentActivities = async (req, res) => {
     })
       .populate({
         path: "brand",
-        select: "name"
-      })
-      .populate({
-        path: "brand",
-        populate: {
-          path: "brandProfile",
-          select: "companyName"
-        }
+        select: "name brandProfile"
       })
       .populate("influencer", "handle")
       .sort({ createdAt: -1 })
@@ -603,7 +511,7 @@ export const getRecentActivities = async (req, res) => {
 
     res.json(activities);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error fetching recent activities");
     res.status(500).send("Server Error");
   }
 };

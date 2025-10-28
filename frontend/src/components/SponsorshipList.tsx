@@ -8,13 +8,20 @@ interface Sponsorship {
   budget: number;
 }
 
-const sponsorships: Sponsorship[] = [
-  { id: 1, name: 'Awesome Product', status: 'Active', budget: 5000 },
-  { id: 2, name: 'Cool Service', status: 'Pending', budget: 2500 },
-  { id: 3, name: 'Great Brand', status: 'Completed', budget: 10000 },
-];
+interface SponsorshipListProps {
+  sponsorships: Sponsorship[];
+}
 
-const SponsorshipList: React.FC = () => {
+const SponsorshipList: React.FC<SponsorshipListProps> = ({ sponsorships }) => {
+  if (!sponsorships || sponsorships.length === 0) {
+    return (
+      <div>
+        <h3 className="text-lg font-bold mb-4">Sponsorships</h3>
+        <p>No sponsorships available.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h3 className="text-lg font-bold mb-4">Sponsorships</h3>

@@ -1,10 +1,11 @@
 // frontend/src/pages/InfluencerPage.tsx
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState, useContext } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import { InfluencerProfile } from "../types/types";
-import { useAuth } from "../useAuth";
+import { AuthContext, AuthContextType } from "../AuthContext";
 import toast from "react-hot-toast";
 import SponsorshipModal from "../components/SponsorshipModal";
+import axios from "axios";
 
 const normalizeUrl = (url?: string) => {
   if (!url) return "";
@@ -14,7 +15,16 @@ const normalizeUrl = (url?: string) => {
 
 const InfluencerPage: React.FC = () => {
   const { handle } = useParams<{ handle: string }>();
-  const { user, token } = useAuth();
+  const location = useLocation();
+  
+  const context = useContext(AuthContext);
+  
+  // Check if context is available
+  if (!context) {
+    throw new Error('InfluencerPage must be used within an AuthProvider');
+  }
+  
+  const { user, token } = context;
 
   const [influencer, setInfluencer] = useState<InfluencerProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +32,13 @@ const InfluencerPage: React.FC = () => {
 
   // Portfolio lightbox
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Check if we should open the sponsor modal (coming from search page)
+    if ((location.state as any)?.openSponsorModal) {
+      setIsModalOpen(true);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchInfluencer = async () => {
@@ -45,9 +62,37 @@ const InfluencerPage: React.FC = () => {
     if (handle) fetchInfluencer();
   }, [handle, token]);
 
+  const handleCreateSponsorship = async (sponsorshipData: any) => {
+    if (!token || !influencer) return;
+    
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      };
+      
+      const data = {
+        influencer: influencer._id,
+        title: sponsorshipData.title,
+        description: sponsorshipData.description,
+        budget: sponsorshipData.budget,
+        deliverables: sponsorshipData.deliverables
+      };
+      
+      await axios.post('http://localhost:5000/api/sponsorships', data, config);
+      toast.success("Sponsorship offer sent successfully!");
+      setIsModalOpen(false);
+    } catch (error: any) {
+      console.error("Error creating sponsorship:", error);
+      toast.error(error.response?.data?.message || "Failed to send sponsorship offer");
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
         Loading profile...
       </div>
     );
@@ -55,7 +100,7 @@ const InfluencerPage: React.FC = () => {
 
   if (!influencer) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-red-500">
+      <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
         Influencer not found
       </div>
     );
@@ -63,93 +108,114 @@ const InfluencerPage: React.FC = () => {
 
   const openImage = (index: number) => setSelectedIndex(index);
   const closeImage = () => setSelectedIndex(null);
-  const prevImage = () => {
-    if (influencer?.portfolio && selectedIndex !== null) {
-      setSelectedIndex(
-        (selectedIndex - 1 + influencer.portfolio.length) %
-          influencer.portfolio.length
-      );
+  const nextImage = () =>
+    setSelectedIndex((prev) =>
+      prev !== null && influencer.portfolio
+        ? (prev + 1) % influencer.portfolio.length
+        : null
+    );
+  const prevImage = () =>
+    setSelectedIndex((prev) =>
+      prev !== null && influencer.portfolio
+        ? (prev - 1 + (influencer.portfolio?.length || 0)) %
+          (influencer.portfolio?.length || 0)
+        : null
+    );
+
+  // Format follower count
+  const formatFollowerCount = (count: number) => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
     }
-  };
-  const nextImage = () => {
-    if (influencer?.portfolio && selectedIndex !== null) {
-      setSelectedIndex((selectedIndex + 1) % influencer.portfolio.length);
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K`;
     }
+    return count.toString();
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        {/* Profile Header */}
-        <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-3xl shadow-2xl p-8 flex flex-col sm:flex-row items-center sm:items-start gap-8 border border-gray-200 dark:border-gray-700 mt-8">
-          <img
-            src={influencer.avatarUrl || "/images/default-avatar.png"}
-            alt={influencer.handle}
-            className="w-36 h-36 rounded-full object-cover border-4 border-primary shadow-lg"
-          />
-          <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-4xl font-extrabold">{influencer.handle}</h1>
-            {influencer.bio && (
-              <p className="mt-2 text-gray-600 dark:text-gray-400 text-lg">
-                {influencer.bio}
-              </p>
-            )}
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Profile Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+        <div className="md:flex">
+          {/* Profile Image */}
+          <div className="md:shrink-0 p-8 flex items-center justify-center">
+            <img
+              className="h-48 w-48 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg"
+              src={influencer.avatarUrl || "https://placehold.co/300"}
+              alt={influencer.handle}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "https://placehold.co/300";
+              }}
+            />
+          </div>
 
-            {/* Stats */}
-            <div className="flex flex-wrap justify-center sm:justify-start gap-8 mt-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">
-                  {influencer.followerCount?.toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Followers
+          {/* Profile Info */}
+          <div className="p-8 flex-1">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {influencer.handle}
+                </h1>
+                <p className="text-xl text-gray-600 dark:text-gray-300 mt-1">@{influencer.handle}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {influencer.categories?.map((category) => (
+                    <span
+                      key={category._id}
+                      className="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-sm font-medium"
+                    >
+                      {category.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg px-4 py-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Followers</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {formatFollowerCount(influencer.followerCount || 0)}
                 </p>
               </div>
-              {influencer.averageEngagementRate !== undefined && (
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-pink-500">
-                    {influencer.averageEngagementRate.toFixed(1)}%
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Engagement
-                  </p>
-                </div>
-              )}
-              {influencer.location && (
-                <div className="text-center">
-                  <p className="text-lg font-semibold">{influencer.location}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Location
-                  </p>
-                </div>
-              )}
             </div>
 
-            {/* Categories */}
-            {influencer.categories?.length > 0 && (
-              <div className="flex flex-wrap gap-3 mt-6 justify-center sm:justify-start">
-                {influencer.categories.map((cat, idx) => (
-                  <span
-                    key={idx}
-                    className="px-4 py-1 bg-gradient-to-r from-purple-200 to-pink-200 dark:from-purple-700 dark:to-pink-700 text-purple-900 dark:text-white rounded-full font-medium text-sm shadow-sm"
-                  >
-                    {cat.name}
-                  </span>
-                ))}
-              </div>
-            )}
+            {/* Bio */}
+            <p className="mt-6 text-gray-600 dark:text-gray-300 max-w-2xl">
+              {influencer.bio ||
+                "This influencer hasn't added a bio yet."}
+            </p>
 
-            {/* Tags */}
-            {(influencer.tags || []).length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {(influencer.tags || []).map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1 bg-primary/20 text-primary-dark rounded-full text-sm"
-                  >
-                    {tag}
+            {/* Location & Join Date */}
+            <div className="mt-6 flex flex-wrap gap-6 text-sm text-gray-500 dark:text-gray-400">
+              {influencer.location && (
+                <div className="flex items-center">
+                  <i className="fas fa-map-marker-alt mr-2"></i>
+                  {influencer.location}
+                </div>
+              )}
+              <div className="flex items-center">
+                <i className="fas fa-calendar-alt mr-2"></i>
+                Joined{" "}
+                {new Date(influencer.createdAt || "").toLocaleDateString()}
+              </div>
+            </div>
+
+            {/* Engagement Rate */}
+            {influencer.engagementRate && (
+              <div className="mt-6">
+                <div className="flex items-center">
+                  <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {influencer.engagementRate}%
                   </span>
-                ))}
+                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                    Engagement Rate
+                  </span>
+                </div>
+                <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-purple-600 h-2 rounded-full"
+                    style={{ width: `${influencer.engagementRate}%` }}
+                  ></div>
+                </div>
               </div>
             )}
 
@@ -159,24 +225,24 @@ const InfluencerPage: React.FC = () => {
                 influencer.pricing.reel ||
                 influencer.pricing.story) && (
                 <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-2">Pricing</h3>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Pricing</h3>
                   <div className="flex gap-6">
                     {influencer.pricing.post && (
                       <div>
-                        <p className="font-bold">₹{influencer.pricing.post}</p>
-                        <p className="text-sm text-gray-500">Post</p>
+                        <p className="font-bold text-gray-900 dark:text-white">₹{influencer.pricing.post}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Post</p>
                       </div>
                     )}
                     {influencer.pricing.reel && (
                       <div>
-                        <p className="font-bold">₹{influencer.pricing.reel}</p>
-                        <p className="text-sm text-gray-500">Reel</p>
+                        <p className="font-bold text-gray-900 dark:text-white">₹{influencer.pricing.reel}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Reel</p>
                       </div>
                     )}
                     {influencer.pricing.story && (
                       <div>
-                        <p className="font-bold">₹{influencer.pricing.story}</p>
-                        <p className="text-sm text-gray-500">Story</p>
+                        <p className="font-bold text-gray-900 dark:text-white">₹{influencer.pricing.story}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Story</p>
                       </div>
                     )}
                   </div>
@@ -190,7 +256,7 @@ const InfluencerPage: React.FC = () => {
                   href={normalizeUrl(influencer.socialLinks.instagram)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-pink-500 transition-colors"
+                  className="text-gray-500 hover:text-pink-500 dark:text-gray-400 dark:hover:text-pink-400 transition-colors"
                 >
                   <i className="fab fa-instagram text-3xl"></i>
                 </a>
@@ -200,7 +266,7 @@ const InfluencerPage: React.FC = () => {
                   href={normalizeUrl(influencer.socialLinks.youtube)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-red-600 transition-colors"
+                  className="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500 transition-colors"
                 >
                   <i className="fab fa-youtube text-3xl"></i>
                 </a>
@@ -211,7 +277,7 @@ const InfluencerPage: React.FC = () => {
                   href={normalizeUrl(influencer.socialLinks.twitter)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-sky-400 transition-colors"
+                  className="text-gray-500 hover:text-sky-400 dark:text-gray-400 dark:hover:text-sky-400 transition-colors"
                 >
                   <i className="fab fa-twitter text-3xl"></i>
                 </a>
@@ -221,7 +287,7 @@ const InfluencerPage: React.FC = () => {
                   href={normalizeUrl(influencer.socialLinks.other)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-green-500 transition-colors"
+                  className="text-gray-500 hover:text-green-500 dark:text-gray-400 dark:hover:text-green-400 transition-colors"
                 >
                   <i className="fas fa-link text-3xl"></i>
                 </a>
@@ -242,8 +308,8 @@ const InfluencerPage: React.FC = () => {
 
         {/* Portfolio */}
         {influencer.portfolio && influencer.portfolio.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-6">Portfolio</h2>
+          <div className="mt-12 px-8 pb-8">
+            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Portfolio</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {influencer.portfolio.map((img, idx) => (
                 <div
@@ -255,6 +321,10 @@ const InfluencerPage: React.FC = () => {
                     src={img}
                     alt={`Portfolio ${idx + 1}`}
                     className="w-full h-56 object-cover transition-transform duration-500 group-hover:scale-110"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "https://placehold.co/300x300?text=Image+Not+Found";
+                    }}
                   />
                 </div>
               ))}
@@ -281,6 +351,10 @@ const InfluencerPage: React.FC = () => {
               src={influencer.portfolio[selectedIndex]}
               alt="Full size"
               className="max-h-[90%] max-w-[90%] rounded-xl shadow-2xl"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "https://placehold.co/600x400?text=Image+Not+Found";
+              }}
             />
             <button
               className="absolute right-6 text-white text-4xl"
@@ -294,13 +368,25 @@ const InfluencerPage: React.FC = () => {
         {/* Sponsorship Modal */}
         {influencer && (
           <SponsorshipModal
-            influencerId={influencer._id}
+            sponsorship={null}
             isOpen={isModalOpen}
             onClose={() => {
               setIsModalOpen(false);
-              // Refresh sponsorships after sending an offer
-              window.location.reload();
             }}
+            onAccept={function (id: string): void {
+              throw new Error('Function not implemented.');
+            }}
+            onReject={function (id: string): void {
+              throw new Error('Function not implemented.');
+            }}
+            onCancel={function (id: string): void {
+              throw new Error('Function not implemented.');
+            }}
+            onComplete={function (id: string): void {
+              throw new Error('Function not implemented.');
+            }}
+            userRole="brand"
+            onCreateSponsorship={handleCreateSponsorship}
           />
         )}
       </div>

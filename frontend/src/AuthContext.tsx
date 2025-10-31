@@ -49,16 +49,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // 🔑 Login
   const login = async (email: string, password: string) => {
-    console.log("Attempting to log in with:", { email, password }); // DEBUG
     const res = await fetch("http://localhost:5000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
+    
     const data = await res.json();
-    console.log("Received from server:", data); // DEBUG
+    console.log("Login response:", data); // For debugging
 
-    if (!res.ok) throw new Error(data.message || "Invalid credentials");
+    if (!res.ok) {
+      // Throw specific error messages based on the response
+      throw new Error(data.msg || "Login failed");
+    }
 
     setToken(data.token);
     localStorage.setItem("token", data.token);
@@ -73,9 +76,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password, role }),
     });
-    if (!res.ok) throw new Error("Signup failed");
-
+    
     const data = await res.json();
+    console.log("Signup response:", data); // For debugging
+    
+    if (!res.ok) {
+      // Throw specific error messages based on the response
+      throw new Error(data.msg || data.errors?.[0]?.msg || "Signup failed");
+    }
+
     setToken(data.token);
     localStorage.setItem("token", data.token);
     setUser(data.user);

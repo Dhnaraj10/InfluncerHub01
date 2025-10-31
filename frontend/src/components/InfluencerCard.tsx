@@ -10,6 +10,7 @@ interface InfluencerCardProps {
   engagementRate: number;
   imageUrl: string;
   categories?: string[];
+  handle: string;
 }
 
 const InfluencerCard: React.FC<InfluencerCardProps> = ({
@@ -19,6 +20,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
   engagementRate,
   imageUrl,
   categories = [],
+  handle
 }) => {
   const context = useContext(AuthContext);
   
@@ -98,7 +100,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
         {/* Buttons */}
         <div className="flex gap-2 mt-4">
           <Link
-            to={`/influencer/${id}`}
+            to={`/influencer/${handle}`}
             className="flex-1 btn-primary text-center py-2 rounded-lg font-medium transition-all duration-200"
           >
             View Profile
@@ -106,7 +108,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
           
           {user?.role === "brand" && (
             <Link
-              to={`/influencer/${id}`}
+              to={`/influencer/${handle}`}
               state={{ openSponsorModal: true }}
               className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-medium text-center hover:opacity-90 transition shadow-lg"
             >

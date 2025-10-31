@@ -8,6 +8,7 @@ import LoginPage from "./pages/Login";
 import SignupPage from "./pages/Signup";
 import ProfilePage from "./pages/Profile";
 import BrandProfilePage from "./pages/BrandProfile";
+import PublicBrandProfilePage from "./pages/PublicBrandProfile";
 import DashboardPage from "./pages/Dashboard";
 import SearchPage from "./pages/SearchPage";
 import InfluencerPage from "./pages/InfluencerPage";
@@ -28,6 +29,7 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/brand-profile" element={<BrandProfilePage />} />
+          <Route path="/brand/:brandId" element={<PublicBrandProfilePage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/influencer/:handle" element={<InfluencerPage />} />

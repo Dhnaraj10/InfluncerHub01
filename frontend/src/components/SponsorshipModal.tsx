@@ -1,6 +1,7 @@
 // frontend/src/components/SponsorshipModal.tsx
 import React, { useState } from 'react';
 import { Sponsorship } from '../types/types';
+import { Link } from 'react-router-dom';
 import Modal from './Modal';
 
 interface SponsorshipModalProps {
@@ -209,7 +210,23 @@ const SponsorshipModal: React.FC<SponsorshipModalProps> = ({
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {userRole === 'brand' 
               ? `For: ${typeof sponsorship.influencer === 'object' ? sponsorship.influencer.handle : 'N/A'}` 
-              : `From: ${typeof sponsorship.brand === 'object' ? sponsorship.brand.name : sponsorship.brand}`}
+              : (
+                <span>
+                  From: {
+                    typeof sponsorship.brand === 'object' 
+                      ? (
+                        <Link 
+                          to={`/brand/${sponsorship.brand._id}`} 
+                          className="text-indigo-600 hover:text-indigo-900 hover:underline"
+                        >
+                          {sponsorship.brand.name || "Unknown Brand"}
+                        </Link>
+                      )
+                      : sponsorship.brand
+                  }
+                </span>
+              )
+            }
           </p>
         </div>
 

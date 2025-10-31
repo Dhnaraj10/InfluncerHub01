@@ -1,19 +1,25 @@
 // frontend/src/pages/MySponsorships.tsx
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { AuthContext, AuthContextType } from '../AuthContext';
+import { AuthContext } from '../AuthContext';
 import SponsorshipFilters from '../components/SponsorshipFilters';
 import axios from 'axios';
 import { Sponsorship } from '../types/types';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import SponsorshipModal from '../components/SponsorshipModal';
+import { FaEye } from 'react-icons/fa';
 import {
   acceptSponsorship,
   rejectSponsorship,
   cancelSponsorship,
   completeSponsorship
 } from '../services/sponsorship';
+
+// Create a partial interface for API responses that might be missing some fields
+interface PartialSponsorship extends Omit<Sponsorship, 'updatedAt'> {
+  updatedAt?: string;
+}
 
 const MySponsorships: React.FC = () => {
   const context = useContext(AuthContext);
@@ -31,6 +37,45 @@ const MySponsorships: React.FC = () => {
   }
 
   const { user, token } = context;
+
+  // Get brand ID from sponsorship object
+  const getBrandId = useCallback((sponsorship: Sponsorship | PartialSponsorship): string | null => {
+    if (typeof sponsorship.brand === 'object' && sponsorship.brand !== null) {
+      // Use the user ID instead of the brand profile ID for public profile links
+      if ('user' in sponsorship.brand && sponsorship.brand.user) {
+        // If user is an object with _id property
+        if (typeof sponsorship.brand.user === 'object' && '_id' in sponsorship.brand.user) {
+          return sponsorship.brand.user._id as string;
+        }
+        // If user is directly the user ID string
+        if (typeof sponsorship.brand.user === 'string') {
+          return sponsorship.brand.user;
+        }
+      }
+    }
+    return null;
+  }, []);
+
+  // Get brand name from sponsorship object
+  const getBrandName = useCallback((sponsorship: Sponsorship | PartialSponsorship): string => {
+    // Handle case where brand is a populated object
+    if (typeof sponsorship.brand === 'object' && sponsorship.brand !== null) {
+      // Try to get the company name first
+      if ('companyName' in sponsorship.brand && sponsorship.brand.companyName) {
+        return sponsorship.brand.companyName as string;
+      }
+      // Try to get the email directly
+      if ('contactEmail' in sponsorship.brand && sponsorship.brand.contactEmail) {
+        return sponsorship.brand.contactEmail as string;
+      }
+      return "Unknown Brand";
+    }
+    // Handle case where brand is a string (ID or name)
+    if (typeof sponsorship.brand === 'string') {
+      return sponsorship.brand || "Unknown Brand";
+    }
+    return "Unknown Brand";
+  }, []);
 
   // Fetch sponsorships based on user role
   const fetchSponsorships = useCallback(async () => {
@@ -51,8 +96,15 @@ const MySponsorships: React.FC = () => {
         endpoint = 'http://localhost:5000/api/sponsorships/my';
       }
       
-      const response = await axios.get<Sponsorship[]>(endpoint, config);
-      setSponsorships(response.data);
+      const response = await axios.get<PartialSponsorship[]>(endpoint, config);
+      
+      // Convert PartialSponsorship[] to Sponsorship[] by adding missing fields
+      const fullSponsorships: Sponsorship[] = response.data.map(s => ({
+        ...s,
+        updatedAt: s.updatedAt || s.createdAt || new Date().toISOString()
+      }));
+      
+      setSponsorships(fullSponsorships);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching sponsorships:', error);
@@ -214,11 +266,20 @@ const MySponsorships: React.FC = () => {
                 {filteredSponsorships.map((sponsorship) => (
                   <tr key={sponsorship._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {user?.role === 'brand' 
-                          ? (typeof sponsorship.influencer === 'object' ? sponsorship.influencer.handle : 'N/A')
-                          : (typeof sponsorship.brand === 'object' ? sponsorship.brand.name : sponsorship.brand)
-                        }
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-medium text-gray-900">
+                          {user?.role === 'brand' 
+                            ? (typeof sponsorship.influencer === 'object' ? sponsorship.influencer.handle : 'N/A')
+                            : <>{getBrandName(sponsorship)}</>}
+                        </div>
+                        {user?.role === 'influencer' && getBrandId(sponsorship) && (
+                          <Link 
+                            to={`/brand/${getBrandId(sponsorship)}`} 
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition"
+                          >
+                            <FaEye size={12} /> View
+                          </Link>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

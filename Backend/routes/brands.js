@@ -2,12 +2,8 @@
 import express from "express";
 import auth from "../middleware/authMiddleware.js";
 import role from "../middleware/roleMiddleware.js";
-import { 
-  createOrUpdateProfile,
-  getMyProfile,
-  getProfileById,
-  deleteProfile
-} from "../controllers/brandController.js";
+import { createOrUpdateProfile, deleteProfile, getMyProfile, getProfileById, searchBrands } 
+  from "../controllers/brandController.js";
 
 const router = express.Router();
 
@@ -19,7 +15,10 @@ router.put("/me", auth, role(["brand"]), createOrUpdateProfile);
 router.get("/me", auth, role(["brand"]), getMyProfile);
 
 // Get profile by user ID
-router.get("/:userId", auth, getProfileById);
+router.get("/:userId", getProfileById);
+
+// Search brands
+router.get("/", searchBrands);
 
 // Delete brand profile
 router.delete("/me", auth, role(["brand"]), deleteProfile);

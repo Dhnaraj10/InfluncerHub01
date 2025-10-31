@@ -3,8 +3,13 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Sponsorship } from "../types/types";
 import { useAuth } from "../useAuth";
 import toast from "react-hot-toast";
-import { FaPlus } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { FaPlus, FaEye } from "react-icons/fa";
+import { useNavigate, Link } from "react-router-dom";
+
+// Create a partial interface for API responses that might be missing some fields
+interface PartialSponsorship extends Omit<Sponsorship, 'updatedAt'> {
+  updatedAt?: string;
+}
 
 const SponsorshipDashboard: React.FC = () => {
   const { user, token } = useAuth();
@@ -34,7 +39,14 @@ const SponsorshipDashboard: React.FC = () => {
         });
         if (!res.ok) throw new Error("Failed to load sponsorships");
         const data = await res.json();
-        setSponsorships(data);
+        
+        // Convert PartialSponsorship[] to Sponsorship[] by adding missing fields
+        const fullSponsorships: Sponsorship[] = data.map((s: PartialSponsorship) => ({
+          ...s,
+          updatedAt: s.updatedAt || s.createdAt || new Date().toISOString()
+        }));
+        
+        setSponsorships(fullSponsorships);
       } catch (err: any) {
         toast.error(err.message || "Error fetching sponsorships");
       } finally {
@@ -89,7 +101,14 @@ const SponsorshipDashboard: React.FC = () => {
       });
       if (res2.ok) {
         const data = await res2.json();
-        setSponsorships(data);
+        
+        // Convert PartialSponsorship[] to Sponsorship[] by adding missing fields
+        const fullSponsorships: Sponsorship[] = data.map((s: PartialSponsorship) => ({
+          ...s,
+          updatedAt: s.updatedAt || s.createdAt || new Date().toISOString()
+        }));
+        
+        setSponsorships(fullSponsorships);
       }
     } catch (err: any) {
       toast.error(err.message || "Error updating sponsorship");
@@ -104,6 +123,45 @@ const SponsorshipDashboard: React.FC = () => {
     if (!budget) return "Not specified";
     return `₹${budget.toLocaleString()}`;
   };
+
+  // Get brand ID from sponsorship object
+  const getBrandId = useCallback((sponsorship: Sponsorship | PartialSponsorship): string | null => {
+    if (typeof sponsorship.brand === 'object' && sponsorship.brand !== null) {
+      // Use the user ID instead of the brand profile ID for public profile links
+      if ('user' in sponsorship.brand && sponsorship.brand.user) {
+        // If user is an object with _id property
+        if (typeof sponsorship.brand.user === 'object' && '_id' in sponsorship.brand.user) {
+          return sponsorship.brand.user._id as string;
+        }
+        // If user is directly the user ID string
+        if (typeof sponsorship.brand.user === 'string') {
+          return sponsorship.brand.user;
+        }
+      }
+    }
+    return null;
+  }, []);
+
+  // Get brand name from sponsorship object
+  const getBrandName = useCallback((sponsorship: Sponsorship | PartialSponsorship): string => {
+    // Handle case where brand is a populated object
+    if (typeof sponsorship.brand === 'object' && sponsorship.brand !== null) {
+      // Try to get the company name first
+      if ('companyName' in sponsorship.brand && sponsorship.brand.companyName) {
+        return sponsorship.brand.companyName as string;
+      }
+      // Try to get the email directly
+      if ('contactEmail' in sponsorship.brand && sponsorship.brand.contactEmail) {
+        return sponsorship.brand.contactEmail as string;
+      }
+      return "Unknown Brand";
+    }
+    // Handle case where brand is a string (ID or name)
+    if (typeof sponsorship.brand === 'string') {
+      return sponsorship.brand || "Unknown Brand";
+    }
+    return "Unknown Brand";
+  }, []);
 
   if (loading && sponsorships.length === 0) {
     return (
@@ -171,47 +229,71 @@ const SponsorshipDashboard: React.FC = () => {
                 className="p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-md"
               >
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="font-medium text-lg text-gray-900 dark:text-white">
-                      {user?.role === "brand"
-                        ? `Influencer: ${typeof s.influencer === "string" ? s.influencer : s.influencer?.handle || "Unknown"}`
-                        : `Brand: ${typeof s.brand === "string" ? s.brand : s.brand?.name || "Unknown"}`}
-                    </p>
-                    <h3 className="font-bold text-xl mt-1">{s.title}</h3>
+                  <div className="flex-1">
+                    {user?.role === "influencer" ? (
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                          Brand:
+                        </span>
+                        <span className="font-medium text-lg text-gray-900 dark:text-white">
+                          {getBrandName(s)}
+                        </span>
+                        {getBrandId(s) && (
+                          <Link 
+                            to={`/brand/${getBrandId(s)}`}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition"
+                          >
+                            <FaEye /> View Profile
+                          </Link>
+                        )}
+                      </div>
+                    ) : null}
+                    
+                    {user?.role === "brand" ? (
+                      <p className="font-medium text-lg text-gray-900 dark:text-white mb-2">
+                        Influencer: {typeof s.influencer === "string" ? s.influencer : s.influencer?.handle || "Unknown"}
+                      </p>
+                    ) : null}
+                    
+                    <h3 className="font-bold text-xl mt-1 text-gray-900 dark:text-white">{s.title}</h3>
                     <p className="text-gray-600 dark:text-gray-400 mt-2">{s.description}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Budget: {formatBudget(s.budget)}
-                    </p>
-                    {s.deliverables && s.deliverables.length > 0 && (
-                      <div className="mt-2">
+                    
+                    <div className="mt-3 flex items-center gap-4">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        Budget: <span className="font-medium">{formatBudget(s.budget)}</span>
+                      </p>
+                      <span
+                        className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                          s.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                            : s.status === "accepted"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : s.status === "rejected"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            : s.status === "completed"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                        }`}
+                      >
+                        {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
+                      </span>
+                    </div>
+                    
+                    {s.deliverables && s.deliverables.length > 0 ? (
+                      <div className="mt-3">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Deliverables:</p>
-                        <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                        <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 mt-1">
                           {s.deliverables.map((d, i) => (
                             <li key={i}>{d}</li>
                           ))}
                         </ul>
                       </div>
-                    )}
-                    <span
-                      className={`inline-block mt-3 px-3 py-1 text-xs font-medium rounded-full ${
-                        s.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : s.status === "accepted"
-                          ? "bg-green-100 text-green-800"
-                          : s.status === "rejected"
-                          ? "bg-red-100 text-red-800"
-                          : s.status === "completed"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
-                    </span>
+                    ) : null}
                   </div>
 
                   {/* Actions */}
                   <div className="mt-4 md:mt-0 flex flex-col gap-2 min-w-[150px]">
-                    {user?.role === "influencer" && s.status === "pending" && (
+                    {user?.role === "influencer" && s.status === "pending" ? (
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleAction(s._id, "accept")}
@@ -226,25 +308,25 @@ const SponsorshipDashboard: React.FC = () => {
                           Reject
                         </button>
                       </div>
-                    )}
+                    ) : null}
                     
-                    {user?.role === "brand" && s.status === "pending" && (
+                    {user?.role === "brand" && s.status === "pending" ? (
                       <button
                         onClick={() => handleAction(s._id, "cancel")}
                         className="px-3 py-1 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
                       >
                         Cancel
                       </button>
-                    )}
+                    ) : null}
                     
-                    {user?.role === "brand" && s.status === "accepted" && (
+                    {user?.role === "brand" && s.status === "accepted" ? (
                       <button
                         onClick={() => handleAction(s._id, "complete")}
                         className="px-3 py-1 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
                       >
                         Mark Complete
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>

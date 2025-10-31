@@ -46,10 +46,15 @@ export const createSponsorship = async (req, res) => {
     // Populate the saved sponsorship with brand and influencer details
     await savedSponsorship.populate({
       path: "brand",
-      select: "name brandProfile"
+      select: "_id user companyName contactEmail"
     });
     
     await savedSponsorship.populate("influencer", "handle");
+    
+    // Ensure proper brand name
+    if (savedSponsorship.brand) {
+      savedSponsorship.brand.name = savedSponsorship.brand.companyName || savedSponsorship.brand.contactEmail || "Unknown Brand";
+    }
 
     // Notify the influencer about the new sponsorship
     publishSponsorshipUpdate({
@@ -60,7 +65,7 @@ export const createSponsorship = async (req, res) => {
 
     res.status(201).json(savedSponsorship);
   } catch (err) {
-    console.error("Error creating sponsorship");
+    console.error("Error creating sponsorship:", err);
     res.status(500).send("Server Error");
   }
 };
@@ -85,7 +90,7 @@ export const getMyBrandSponsorships = async (req, res) => {
     const sponsorships = await Sponsorship.find({ brand: brandProfile._id })
       .populate({
         path: "brand",
-        select: "name brandProfile"
+        select: "_id user companyName contactEmail"
       })
       .populate("influencer", "handle")
       .sort({ createdAt: -1 });
@@ -94,9 +99,9 @@ export const getMyBrandSponsorships = async (req, res) => {
     const transformedSponsorships = sponsorships.map(sponsorship => {
       const sponsorshipObj = sponsorship.toObject();
       
-      // Use company name from brand profile if available
-      if (sponsorshipObj.brand && sponsorshipObj.brand.brandProfile && sponsorshipObj.brand.brandProfile.companyName) {
-        sponsorshipObj.brand.name = sponsorshipObj.brand.brandProfile.companyName;
+      // Ensure we have proper brand name
+      if (sponsorshipObj.brand) {
+        sponsorshipObj.brand.name = sponsorshipObj.brand.companyName || sponsorshipObj.brand.contactEmail || "Unknown Brand";
       }
       
       return sponsorshipObj;
@@ -104,7 +109,7 @@ export const getMyBrandSponsorships = async (req, res) => {
 
     res.json(transformedSponsorships);
   } catch (err) {
-    console.error("Error fetching brand sponsorships");
+    console.error("Error fetching brand sponsorships:", err);
     res.status(500).send("Server Error");
   }
 };
@@ -132,14 +137,26 @@ export const getOpenSponsorships = async (req, res) => {
     })
       .populate({
         path: "brand",
-        select: "name"
+        select: "_id user companyName contactEmail"
       })
       .populate("influencer", "handle")
       .sort({ createdAt: -1 });
 
-    res.json(sponsorships);
+    // Transform sponsorships to ensure proper brand name is used
+    const transformedSponsorships = sponsorships.map(sponsorship => {
+      const sponsorshipObj = sponsorship.toObject();
+      
+      // Ensure we have proper brand name
+      if (sponsorshipObj.brand) {
+        sponsorshipObj.brand.name = sponsorshipObj.brand.companyName || sponsorshipObj.brand.contactEmail || "Unknown Brand";
+      }
+      
+      return sponsorshipObj;
+    });
+
+    res.json(transformedSponsorships);
   } catch (err) {
-    console.error("Error fetching open sponsorships");
+    console.error("Error fetching open sponsorships:", err);
     res.status(500).send("Server Error");
   }
 };
@@ -164,14 +181,26 @@ export const getMySponsorships = async (req, res) => {
     const sponsorships = await Sponsorship.find({ influencer: influencerProfile._id })
       .populate({
         path: "brand",
-        select: "name"
+        select: "_id user companyName contactEmail"
       })
       .populate("influencer", "handle")
       .sort({ createdAt: -1 });
 
-    res.json(sponsorships);
+    // Transform sponsorships to ensure proper brand name is used
+    const transformedSponsorships = sponsorships.map(sponsorship => {
+      const sponsorshipObj = sponsorship.toObject();
+      
+      // Ensure we have proper brand name
+      if (sponsorshipObj.brand) {
+        sponsorshipObj.brand.name = sponsorshipObj.brand.companyName || sponsorshipObj.brand.contactEmail || "Unknown Brand";
+      }
+      
+      return sponsorshipObj;
+    });
+
+    res.json(transformedSponsorships);
   } catch (err) {
-    console.error("Error fetching influencer sponsorships");
+    console.error("Error fetching influencer sponsorships:", err);
     res.status(500).send("Server Error");
   }
 };
@@ -215,10 +244,15 @@ export const acceptSponsorship = async (req, res) => {
     // Populate the updated sponsorship with brand and influencer details
     await updatedSponsorship.populate({
       path: "brand",
-      select: "name brandProfile"
+      select: "_id user companyName contactEmail"
     });
     
     await updatedSponsorship.populate("influencer", "handle");
+    
+    // Ensure proper brand name
+    if (updatedSponsorship.brand) {
+      updatedSponsorship.brand.name = updatedSponsorship.brand.companyName || updatedSponsorship.brand.contactEmail || "Unknown Brand";
+    }
 
     // Notify the brand about the accepted sponsorship
     const brandProfile = await BrandProfile.findById(sponsorship.brand);
@@ -232,7 +266,7 @@ export const acceptSponsorship = async (req, res) => {
 
     res.json(updatedSponsorship);
   } catch (err) {
-    console.error("Error accepting sponsorship");
+    console.error("Error accepting sponsorship:", err);
     res.status(500).send("Server Error");
   }
 };
@@ -276,10 +310,15 @@ export const rejectSponsorship = async (req, res) => {
     // Populate the updated sponsorship with brand and influencer details
     await updatedSponsorship.populate({
       path: "brand",
-      select: "name brandProfile"
+      select: "_id user companyName contactEmail"
     });
     
     await updatedSponsorship.populate("influencer", "handle");
+    
+    // Ensure proper brand name
+    if (updatedSponsorship.brand) {
+      updatedSponsorship.brand.name = updatedSponsorship.brand.companyName || updatedSponsorship.brand.contactEmail || "Unknown Brand";
+    }
 
     // Notify the brand about the rejected sponsorship
     const brandProfile = await BrandProfile.findById(sponsorship.brand);
@@ -293,7 +332,7 @@ export const rejectSponsorship = async (req, res) => {
 
     res.json(updatedSponsorship);
   } catch (err) {
-    console.error("Error rejecting sponsorship");
+    console.error("Error rejecting sponsorship:", err);
     res.status(500).send("Server Error");
   }
 };
@@ -337,10 +376,15 @@ export const cancelSponsorship = async (req, res) => {
     // Populate the updated sponsorship with brand and influencer details
     await updatedSponsorship.populate({
       path: "brand",
-      select: "name brandProfile"
+      select: "_id user companyName contactEmail"
     });
     
     await updatedSponsorship.populate("influencer", "handle");
+    
+    // Ensure proper brand name
+    if (updatedSponsorship.brand) {
+      updatedSponsorship.brand.name = updatedSponsorship.brand.companyName || updatedSponsorship.brand.contactEmail || "Unknown Brand";
+    }
 
     // Notify the influencer about the cancelled sponsorship
     const influencerProfile = await InfluencerProfile.findById(sponsorship.influencer);
@@ -354,7 +398,7 @@ export const cancelSponsorship = async (req, res) => {
 
     res.json(updatedSponsorship);
   } catch (err) {
-    console.error("Error cancelling sponsorship");
+    console.error("Error cancelling sponsorship:", err);
     res.status(500).send("Server Error");
   }
 };
@@ -398,10 +442,15 @@ export const completeSponsorship = async (req, res) => {
     // Populate the updated sponsorship with brand and influencer details
     await updatedSponsorship.populate({
       path: "brand",
-      select: "name brandProfile"
+      select: "_id user companyName contactEmail"
     });
     
     await updatedSponsorship.populate("influencer", "handle");
+    
+    // Ensure proper brand name
+    if (updatedSponsorship.brand) {
+      updatedSponsorship.brand.name = updatedSponsorship.brand.companyName || updatedSponsorship.brand.contactEmail || "Unknown Brand";
+    }
 
     // Notify the influencer about the completed sponsorship
     const influencerProfile = await InfluencerProfile.findById(sponsorship.influencer);
@@ -415,7 +464,7 @@ export const completeSponsorship = async (req, res) => {
 
     res.json(updatedSponsorship);
   } catch (err) {
-    console.error("Error completing sponsorship");
+    console.error("Error completing sponsorship:", err);
     res.status(500).send("Server Error");
   }
 };
@@ -434,7 +483,7 @@ export const getRecentActivities = async (req, res) => {
     })
       .populate({
         path: "brand",
-        select: "name brandProfile"
+        select: "_id user companyName contactEmail"
       })
       .populate("influencer", "handle")
       .sort({ createdAt: -1 })
@@ -444,33 +493,18 @@ export const getRecentActivities = async (req, res) => {
     const activities = sponsorships.map(sponsorship => {
       // Transform brand data to ensure proper name is used
       const brandData = sponsorship.brand;
-      if (brandData && brandData.brandProfile && brandData.brandProfile.companyName) {
-        sponsorship.brand.name = brandData.brandProfile.companyName;
+      if (brandData) {
+        sponsorship.brand.name = brandData.companyName || brandData.contactEmail || "Unknown Brand";
       }
       
       let description = "";
       let type = "sponsorship";
       
-      if (sponsorship.brand._id.toString() === req.user._id.toString()) {
-        // User is the brand
-        if (sponsorship.status === "pending") {
-          description = `You sent a sponsorship offer to ${sponsorship.influencer.handle}`;
-        } else if (sponsorship.status === "accepted") {
-          description = `${sponsorship.influencer.handle} accepted your sponsorship offer`;
-          type = "notification";
-        } else if (sponsorship.status === "rejected") {
-          description = `${sponsorship.influencer.handle} rejected your sponsorship offer`;
-          type = "notification";
-        } else if (sponsorship.status === "completed") {
-          description = `You completed the sponsorship with ${sponsorship.influencer.handle}`;
-          type = "payment";
-        } else if (sponsorship.status === "cancelled") {
-          description = `You cancelled the sponsorship with ${sponsorship.influencer.handle}`;
-          type = "notification";
-        }
-      } else {
+      // For activities, we need to check if the user is the brand or influencer
+      // Since we're populating brand with BrandProfile now, we need to adjust the logic
+      if (sponsorship.influencer._id.toString() === req.user._id.toString()) {
         // User is the influencer
-        const brandName = sponsorship.brand.companyName || sponsorship.brand.name;
+        const brandName = sponsorship.brand.companyName || sponsorship.brand.contactEmail || "Unknown Brand";
         if (sponsorship.status === "pending") {
           description = `${brandName} sent you a sponsorship offer`;
           type = "sponsorship";
@@ -485,6 +519,23 @@ export const getRecentActivities = async (req, res) => {
           type = "payment";
         } else if (sponsorship.status === "cancelled") {
           description = `${brandName} cancelled the sponsorship`;
+          type = "notification";
+        }
+      } else {
+        // User is the brand
+        if (sponsorship.status === "pending") {
+          description = `You sent a sponsorship offer to ${sponsorship.influencer.handle}`;
+        } else if (sponsorship.status === "accepted") {
+          description = `${sponsorship.influencer.handle} accepted your sponsorship offer`;
+          type = "notification";
+        } else if (sponsorship.status === "rejected") {
+          description = `${sponsorship.influencer.handle} rejected your sponsorship offer`;
+          type = "notification";
+        } else if (sponsorship.status === "completed") {
+          description = `You completed the sponsorship with ${sponsorship.influencer.handle}`;
+          type = "payment";
+        } else if (sponsorship.status === "cancelled") {
+          description = `You cancelled the sponsorship with ${sponsorship.influencer.handle}`;
           type = "notification";
         }
       }
@@ -511,7 +562,7 @@ export const getRecentActivities = async (req, res) => {
 
     res.json(activities);
   } catch (err) {
-    console.error("Error fetching recent activities");
+    console.error("Error fetching recent activities:", err);
     res.status(500).send("Server Error");
   }
 };

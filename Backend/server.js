@@ -28,7 +28,7 @@ const corsOptions = {
   origin: [
     process.env.FRONTEND_ORIGIN || "http://localhost:3000",
     // Add your deployed frontend URL here after deployment
-    // Example: "https://your-app-name.vercel.app"
+    "https://your-app-name.vercel.app" // Replace with your actual Vercel URL
   ],
   credentials: true
 };

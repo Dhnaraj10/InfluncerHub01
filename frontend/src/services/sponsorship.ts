@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { Sponsorship } from '../types/types';
 
-const API_URL = 'http://localhost:5000/api/sponsorships';
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sponsorships`;
 
 // Get all sponsorships for the logged in user
 export const getSponsorships = async (token: string) => {
@@ -54,7 +54,7 @@ export const acceptSponsorship = async (id: string, token: string) => {
       Authorization: `Bearer ${token}`
     }
   };
-  const response = await axios.patch(`${API_URL}/${id}/accept`, {}, config);
+  const response = await axios.put(`${API_URL}/${id}/accept`, {}, config);
   return response.data;
 };
 
@@ -65,7 +65,7 @@ export const rejectSponsorship = async (id: string, token: string) => {
       Authorization: `Bearer ${token}`
     }
   };
-  const response = await axios.patch(`${API_URL}/${id}/reject`, {}, config);
+  const response = await axios.put(`${API_URL}/${id}/reject`, {}, config);
   return response.data;
 };
 
@@ -89,4 +89,15 @@ export const completeSponsorship = async (id: string, token: string) => {
   };
   const response = await axios.put(`${API_URL}/${id}/complete`, {}, config);
   return response.data;
+};
+
+export default {
+  getSponsorships,
+  getBrandSponsorships,
+  getInfluencerSponsorships,
+  createSponsorship,
+  acceptSponsorship,
+  rejectSponsorship,
+  cancelSponsorship,
+  completeSponsorship
 };

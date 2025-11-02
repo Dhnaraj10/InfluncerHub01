@@ -1,7 +1,7 @@
 //src/services/auth.ts
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/auth';
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth`;
 
 export const login = async (credentials: any) => {
   const response = await axios.post(`${API_URL}/login`, credentials);
@@ -11,4 +11,9 @@ export const login = async (credentials: any) => {
 export const register = async (userData: any) => {
   const response = await axios.post(`${API_URL}/register`, userData);
   return response.data;
+};
+
+export default {
+  login,
+  register
 };

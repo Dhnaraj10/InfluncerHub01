@@ -22,13 +22,18 @@ import { initializeWebSocketServer } from "./utils/websocketServer.js";
 dotenv.config();
 const app = express();
 app.use(express.json());
-app.use(cors({
-	origin: [
-		process.env.FRONTEND_ORIGIN || "http://localhost:3000",
-		"https://your-vercel-app.vercel.app" // Add your actual Vercel URL here after deployment
-	],
-	credentials: true
-}));
+
+// Configure CORS to allow frontend requests
+const corsOptions = {
+  origin: [
+    process.env.FRONTEND_ORIGIN || "http://localhost:3000",
+    // Add your deployed frontend URL here after deployment
+    // Example: "https://your-app-name.vercel.app"
+  ],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 // connect DB
 connectDB();

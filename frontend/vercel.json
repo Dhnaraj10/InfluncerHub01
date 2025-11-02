@@ -1,0 +1,10 @@
+{
+  "build": {
+    "env": {
+      "REACT_APP_API_URL": "https://influncerhub.onrender.com"
+    }
+  },
+  "github": {
+    "silent": true
+  }
+}

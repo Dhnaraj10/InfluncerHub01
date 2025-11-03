@@ -1,4 +1,3 @@
-REACT_APP_API_URL=http://localhost:5000
 // frontend/src/pages/BrandProfile.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../useAuth";

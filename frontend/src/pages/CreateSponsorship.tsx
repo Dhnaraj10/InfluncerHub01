@@ -57,7 +57,7 @@ const CreateSponsorship: React.FC = () => {
       params.append('q', query);
       params.append('limit', '20'); // Limit results for performance
 
-      const res = await fetch(`http://localhost:5000/api/influencers?${params.toString()}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       

@@ -195,7 +195,7 @@ const Profile: React.FC = () => {
     try {
       for (let i = 0; i < files.length; i++) {
         const formData = new FormData();
-        formData.append("file", files[i]);
+        formData.append("image", files[i]);
 
         const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload`, {
           method: "POST",

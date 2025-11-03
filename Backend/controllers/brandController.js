@@ -15,12 +15,25 @@ export const createOrUpdateProfile = async (req, res) => {
     budgetPerPost,
   } = req.body;
 
+  // Validate required fields
+  if (!companyName) {
+    return res.status(400).json({ msg: "Company name is required" });
+  }
+  
+  if (!industry) {
+    return res.status(400).json({ msg: "Industry is required" });
+  }
+  
+  if (!contactEmail) {
+    return res.status(400).json({ msg: "Contact email is required" });
+  }
+
   const profileFields = { user: req.user.id };
 
   // Required fields
-  if (companyName) profileFields.companyName = companyName;
-  if (industry) profileFields.industry = industry;
-  if (contactEmail) profileFields.contactEmail = contactEmail;
+  profileFields.companyName = companyName;
+  profileFields.industry = industry;
+  profileFields.contactEmail = contactEmail;
 
   // Optional fields
   if (description !== undefined) profileFields.description = description || "";
@@ -48,7 +61,10 @@ export const createOrUpdateProfile = async (req, res) => {
 
     res.json(profile);
   } catch (err) {
-    console.error(err.message);
+    console.error('Brand profile save error:', err.message);
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ msg: 'Validation error', errors: err.errors });
+    }
     res.status(500).send("Server Error");
   }
 };

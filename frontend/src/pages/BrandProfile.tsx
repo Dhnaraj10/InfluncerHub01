@@ -93,7 +93,7 @@ const BrandProfile: React.FC = () => {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("image", file);
 
     try {
       setUploading(true);
@@ -147,6 +147,9 @@ const BrandProfile: React.FC = () => {
         : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands`;
       
       const method = profileExists ? "PUT" : "POST";
+      
+      console.log('Sending brand profile data:', normalizedData); // Add logging
+      
       const res = await fetch(url, {
         method,
         headers: {
@@ -156,18 +159,26 @@ const BrandProfile: React.FC = () => {
         body: JSON.stringify(normalizedData),
       });
 
-      if (!res.ok) throw new Error("Failed to save profile");
+      console.log('Response status:', res.status); // Add logging
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Server error response:', errorData);
+        throw new Error(errorData.msg || `Failed to save profile: ${res.status} ${res.statusText}`);
+      }
 
       const profileResponse = await res.json();
+      console.log('Profile response:', profileResponse); // Add logging
+      
       setInitialProfileData(profileResponse);
       reset(profileResponse);
       setLogoPreview(profileResponse.logoUrl || null);
       setProfileExists(true);
       setIsEditMode(false);
       toast.success("Profile saved successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to save profile");
+    } catch (err: any) {
+      console.error('Profile save error:', err);
+      toast.error(err.message || "Failed to save profile");
     }
   };
 

@@ -62,6 +62,8 @@ const SearchPage: React.FC = () => {
   const performSearch = async (formData: SearchFormValues) => {
     setLoading(true);
     try {
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      
       if (searchType === 'influencers') {
         const params = new URLSearchParams();
         if (formData.query) params.append('q', formData.query);
@@ -70,14 +72,14 @@ const SearchPage: React.FC = () => {
         if (formData.categories.length > 0) params.append('categories', formData.categories.join(','));
         if (formData.tags.length > 0) params.append('tags', formData.tags.join(','));
 
-        const res = await fetch(`http://localhost:5000/api/influencers?${params.toString()}`);
+        const res = await fetch(`${baseUrl}/api/influencers?${params.toString()}`);
         if (!res.ok) throw new Error('Search failed');
         const data = await res.json();
         setResults(data.results || []);
 
         if ((data.results || []).length === 0) {
           // Show latest influencers if no results
-          const latestRes = await fetch(`http://localhost:5000/api/influencers`);
+          const latestRes = await fetch(`${baseUrl}/api/influencers`);
           if (latestRes.ok) {
             const latestData = await latestRes.json();
             setResults(latestData.results || []);
@@ -92,7 +94,7 @@ const SearchPage: React.FC = () => {
         if (formData.maxBudget) params.append('maxBudget', String(formData.maxBudget));
 
         try {
-          const res = await fetch(`http://localhost:5000/api/brands?${params.toString()}`);
+          const res = await fetch(`${baseUrl}/api/brands?${params.toString()}`);
           if (!res.ok) throw new Error('Brand search failed');
           
           const data = await res.json();
@@ -100,7 +102,7 @@ const SearchPage: React.FC = () => {
           
           if (!data.results || data.results.length === 0) {
             // Show latest brands if no results
-            const latestRes = await fetch(`http://localhost:5000/api/brands`);
+            const latestRes = await fetch(`${baseUrl}/api/brands`);
             if (latestRes.ok) {
               const latestData = await latestRes.json();
               setResults(latestData.results || []);

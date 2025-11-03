@@ -19,6 +19,12 @@ const Signup: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (data: SignupFormValues) => {
+    // Check network status first
+    if (!navigator.onLine) {
+      toast.error("No internet connection. Please check your network.");
+      return;
+    }
+
     setLoading(true);
     try {
       await signup(data.name, data.email, data.password, data.role);
@@ -33,10 +39,18 @@ const Signup: React.FC = () => {
           message: "An account with this email already exists"
         });
         toast.error("An account with this email already exists");
+      } else if (err.message.includes("Network error") || err.message.includes("timeout")) {
+        toast.error("Connection problem. Please check your internet and try again.");
       } else {
         toast.error(err.message || "Something went wrong. Please try again.");
       }
     }
+  };
+
+  // Explicitly handle form submission to prevent default behavior
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(onSubmit)(e);
   };
 
   return (
@@ -46,7 +60,7 @@ const Signup: React.FC = () => {
           Create Your Account
         </h1>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleFormSubmit} className="space-y-6">
           <input
             {...register("name", { required: "Name is required" })}
             placeholder="Full Name"

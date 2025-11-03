@@ -17,6 +17,12 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (data: LoginFormValues) => {
+    // Check network status first
+    if (!navigator.onLine) {
+      toast.error("No internet connection. Please check your network.");
+      return;
+    }
+    
     setLoading(true);
     try {
       await login(data.email, data.password);
@@ -33,6 +39,8 @@ const Login: React.FC = () => {
           message: "Incorrect email or password"
         });
         toast.error("Incorrect email or password");
+      } else if (err.message.includes("Network error") || err.message.includes("timeout")) {
+        toast.error("Connection problem. Please check your internet and try again.");
       } else {
         // For any other authentication error
         setError("password", {
@@ -44,6 +52,12 @@ const Login: React.FC = () => {
     }
   };
 
+  // Explicitly handle form submission to prevent default behavior
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(onSubmit)(e);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background-light to-white dark:from-background-dark dark:to-gray-900 px-4">
       <div className="max-w-md w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg p-8 rounded-2xl shadow-xl">
@@ -51,7 +65,7 @@ const Login: React.FC = () => {
           Login to Your Account
         </h1>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleFormSubmit} className="space-y-6">
           <div>
             <input
               {...register("email", { required: "Email is required" })}

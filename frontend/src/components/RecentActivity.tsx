@@ -23,7 +23,7 @@ const RecentActivity: React.FC = () => {
       
       try {
         setLoading(true);
-        const res = await fetch("http://localhost:5000/api/sponsorships/activities", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sponsorships/activities`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -106,15 +106,14 @@ const RecentActivity: React.FC = () => {
             {user?.role === 'brand' ? 'Campaign Activity' : 'Collaboration Activity'}
           </h3>
         </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-start p-3 rounded-lg">
-              <div className="p-2 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse">
-                <div className="h-5 w-5"></div>
-              </div>
-              <div className="ml-4 flex-1">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mt-2 animate-pulse"></div>
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-center py-3 border-b border-gray-100 dark:border-gray-700">
+              <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-10 w-10"></div>
+              <div className="ml-4 flex-1 space-y-2">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
               </div>
             </div>
           ))}
@@ -134,45 +133,96 @@ const RecentActivity: React.FC = () => {
         </Link>
       </div>
       
-      <div className="space-y-4">
-        {activities.length > 0 ? (
-          activities.map((activity) => (
-            <div key={activity.id} className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-              {getIconForActivityType(activity.type)}
-              
-              <div className="ml-4 flex-1">
-                <p className="text-gray-800 dark:text-gray-200">{activity.description}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{activity.timestamp}</p>
-              </div>
-              
-              {activity.actionUrl && (
-                <Link 
-                  to={activity.actionUrl}
-                  className="text-primary hover:text-primary-dark dark:hover:text-primary-light"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      <div className="divide-y divide-gray-100 dark:divide-gray-700">
+        {activities.length === 0 ? (
+          <div className="px-6 py-8 text-center">
+            <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+              <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              {user?.role === 'brand' ? 'No recent campaign activity' : 'No recent collaboration activity'}
-            </h4>
-            <p className="text-gray-500 dark:text-gray-400">
-              {user?.role === 'brand' 
-                ? 'When you send sponsorship offers, activity will appear here.' 
-                : 'When you receive collaboration requests, activity will appear here.'}
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No recent activity</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              You don't have any recent activity yet.
             </p>
           </div>
+        ) : (
+          activities.map((activity) => (
+            <div key={activity.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {activity.type === 'sponsorship' && (
+                    <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  )}
+                  {activity.type === 'profile' && (
+                    <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  )}
+                  {activity.type === 'message' && (
+                    <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                      <svg className="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                    </div>
+                  )}
+                  {activity.type === 'payment' && (
+                    <div className="h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                      <svg className="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  )}
+                  {activity.type === 'notification' && (
+                    <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                      <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                    </div>
+                  )}
+                  {activity.type === 'default' && (
+                    <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                      <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <div className="ml-4 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {activity.description}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {new Date(activity.timestamp).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                {activity.actionUrl && (
+                  <div className="ml-4 flex-shrink-0">
+                    <Link
+                      to={activity.actionUrl}
+                      className="inline-flex items-center text-sm font-medium text-primary hover:text-primary-dark"
+                    >
+                      View
+                      <svg className="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>

@@ -91,9 +91,9 @@ const MySponsorships: React.FC = () => {
       
       let endpoint = '';
       if (user.role === 'brand') {
-        endpoint = 'http://localhost:5000/api/sponsorships/brand/my';
+        endpoint = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sponsorships/brand/my`;
       } else if (user.role === 'influencer') {
-        endpoint = 'http://localhost:5000/api/sponsorships/my';
+        endpoint = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sponsorships/my`;
       }
       
       const response = await axios.get<PartialSponsorship[]>(endpoint, config);

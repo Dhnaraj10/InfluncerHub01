@@ -1,3 +1,4 @@
+REACT_APP_API_URL=http://localhost:5000
 // frontend/src/pages/BrandProfile.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../useAuth";
@@ -60,7 +61,7 @@ const BrandProfile: React.FC = () => {
     const fetchProfile = async () => {
       if (!token || user?.role !== "brand") return;
       try {
-        const res = await fetch("http://localhost:5000/api/brands/me", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.status === 404) {
@@ -97,7 +98,7 @@ const BrandProfile: React.FC = () => {
 
     try {
       setUploading(true);
-      const res = await fetch("http://localhost:5000/api/upload", {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -142,8 +143,12 @@ const BrandProfile: React.FC = () => {
     };
 
     try {
+      const url = profileExists 
+        ? `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands/me` 
+        : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands`;
+      
       const method = profileExists ? "PUT" : "POST";
-      const res = await fetch("http://localhost:5000/api/brands/me", {
+      const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",

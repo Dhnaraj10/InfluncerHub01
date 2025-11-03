@@ -142,7 +142,7 @@ const CreateSponsorship: React.FC = () => {
       
       for (const influencerId of data.influencerProfileIds) {
         try {
-          const res = await fetch("http://localhost:5000/api/sponsorships", {
+          const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sponsorships`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

@@ -20,12 +20,13 @@ const SponsorshipDashboard: React.FC = () => {
 
   // Determine which endpoint to use based on user role
   const getSponsorshipsEndpoint = useCallback(() => {
+    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
     if (user?.role === "brand") {
-      return "http://localhost:5000/api/sponsorships/brand/my";
+      return `${baseUrl}/api/sponsorships/brand/my`;
     } else if (user?.role === "influencer") {
-      return "http://localhost:5000/api/sponsorships/my";
+      return `${baseUrl}/api/sponsorships/my`;
     }
-    return "http://localhost:5000/api/sponsorships/my";
+    return `${baseUrl}/api/sponsorships/my`;
   }, [user?.role]);
 
   useEffect(() => {
@@ -66,7 +67,8 @@ const SponsorshipDashboard: React.FC = () => {
 
   const handleAction = async (id: string, action: "accept" | "reject" | "cancel" | "complete") => {
     try {
-      let endpoint = `http://localhost:5000/api/sponsorships/${id}`;
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      let endpoint = `${baseUrl}/api/sponsorships/${id}`;
       let method = "PUT";
       
       switch (action) {

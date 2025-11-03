@@ -91,7 +91,7 @@ const Profile: React.FC = () => {
       return;
     }
       try {
-        const res = await fetch("http://localhost:5000/api/influencers/me", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.status === 404) {
@@ -159,7 +159,7 @@ const Profile: React.FC = () => {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:5000/api/upload", {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -197,7 +197,7 @@ const Profile: React.FC = () => {
         const formData = new FormData();
         formData.append("file", files[i]);
 
-        const res = await fetch("http://localhost:5000/api/upload", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
@@ -289,8 +289,8 @@ const Profile: React.FC = () => {
       };
 
       const url = profileExists
-        ? "http://localhost:5000/api/influencers/me"
-        : "http://localhost:5000/api/influencers/me";
+        ? `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/me`
+        : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/me`;
 
       const method = profileExists ? "PUT" : "POST";
 
@@ -324,7 +324,7 @@ const Profile: React.FC = () => {
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete your profile?")) return;
     try {
-      const res = await fetch("http://localhost:5000/api/influencers/me", {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/me`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

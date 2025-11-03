@@ -23,16 +23,14 @@
       "dest": "/index.html"
     }
   ],
-  "build": {
-    "env": {
-      "CI": "false",
-      "REACT_APP_API_URL": "https://influncerhub.onrender.com"
-    }
-  },
   "github": {
     "silent": true
   },
   "installCommand": "npm install --legacy-peer-deps",
   "buildCommand": "npm run build",
-  "outputDirectory": "build"
+  "outputDirectory": "build",
+  "env": {
+    "CI": "false",
+    "REACT_APP_API_URL": "https://influncerhub.onrender.com"
+  }
 }

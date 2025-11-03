@@ -133,3 +133,4 @@ frontend/dist/
 # Editor files
 *.swp
 *.swo
+.vercel

@@ -25,12 +25,9 @@ app.use(express.json());
 
 // Configure CORS to allow frontend requests
 const corsOptions = {
-  origin: [
-    process.env.FRONTEND_ORIGIN || "http://localhost:3000",
-    // Add your deployed frontend URL here after deployment
-    "https://your-app-name.vercel.app" // Replace with your actual Vercel URL
-  ],
-  credentials: true
+  origin: process.env.FRONTEND_ORIGIN || "http://localhost:3000",
+  credentials: true,
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));

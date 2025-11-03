@@ -1,12 +1,13 @@
 // frontend/src/pages/SearchPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useForm, Controller, FieldValues } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { InfluencerProfile, BrandProfile } from '../types/types';
 import InfluencerCard from '../components/InfluencerCard';
 import BrandCard from '../components/BrandCard';
 import toast from 'react-hot-toast';
 import { useAuth } from '../useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { searchService } from '../services/search';
 
 interface SearchFormValues {
   query: string;
@@ -29,7 +30,7 @@ const SearchPage: React.FC = () => {
   const defaultSearchType = searchTypeFromUrl || (user?.role === 'influencer' ? 'brands' : 'influencers');
   
   const [searchType, setSearchType] = useState<'influencers' | 'brands'>(defaultSearchType as any);
-  const { register, handleSubmit, control, reset, setValue } = useForm<SearchFormValues>({ 
+  const { register, handleSubmit, reset } = useForm<SearchFormValues>({ 
     defaultValues: { 
       categories: [], 
       tags: [],
@@ -41,9 +42,6 @@ const SearchPage: React.FC = () => {
   });
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [categoryInput, setCategoryInput] = useState('');
-  const [tagInput, setTagInput] = useState('');
 
   // Load initial results when page loads or search type changes
   useEffect(() => {
@@ -53,17 +51,11 @@ const SearchPage: React.FC = () => {
   const loadInitialResults = async () => {
     setLoading(true);
     try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      
       if (searchType === 'influencers') {
-        const res = await fetch(`${baseUrl}/api/influencers/all`);
-        if (!res.ok) throw new Error('Failed to load influencers');
-        const data = await res.json();
+        const data = await searchService.getAllInfluencers({ limit: 20 });
         setResults(data.results || []);
       } else {
-        const res = await fetch(`${baseUrl}/api/brands/all`);
-        if (!res.ok) throw new Error('Failed to load brands');
-        const data = await res.json();
+        const data = await searchService.getAllBrands({ limit: 20 });
         setResults(data.results || []);
       }
     } catch (err: any) {
@@ -77,67 +69,50 @@ const SearchPage: React.FC = () => {
   const performSearch = async (formData: SearchFormValues) => {
     setLoading(true);
     try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      
       if (searchType === 'influencers') {
-        const params = new URLSearchParams();
-        if (formData.query) params.append('q', formData.query);
-        if (formData.minFollowers) params.append('minFollowers', String(formData.minFollowers));
-        if (formData.maxFollowers) params.append('maxFollowers', String(formData.maxFollowers));
-        if (formData.categories.length > 0) params.append('categories', formData.categories.join(','));
-        if (formData.tags.length > 0) params.append('tags', formData.tags.join(','));
+        const params: any = {};
+        if (formData.query) params.q = formData.query;
+        if (formData.minFollowers) params.minFollowers = formData.minFollowers;
+        if (formData.maxFollowers) params.maxFollowers = formData.maxFollowers;
+        if (formData.categories.length > 0) params.categories = formData.categories.join(',');
+        if (formData.tags.length > 0) params.tags = formData.tags.join(',');
 
-        const res = await fetch(`${baseUrl}/api/influencers?${params.toString()}`);
-        if (!res.ok) throw new Error('Search failed');
-        const data = await res.json();
+        const data = await searchService.searchInfluencers(params);
         setResults(data.results || []);
 
         if ((data.results || []).length === 0) {
           // Show latest influencers if no results
-          const latestRes = await fetch(`${baseUrl}/api/influencers/all`);
-          if (latestRes.ok) {
-            const latestData = await latestRes.json();
-            setResults(latestData.results || []);
-          }
+          const latestData = await searchService.getAllInfluencers({ limit: 20 });
+          setResults(latestData.results || []);
         }
       } else {
         // Brand search
-        const params = new URLSearchParams();
-        if (formData.query) params.append('q', formData.query);
-        if (formData.industry) params.append('industry', formData.industry);
-        if (formData.minBudget) params.append('minBudget', String(formData.minBudget));
-        if (formData.maxBudget) params.append('maxBudget', String(formData.maxBudget));
+        const params: any = {};
+        if (formData.query) params.q = formData.query;
+        if (formData.industry) params.industry = formData.industry;
+        if (formData.minBudget) params.minBudget = formData.minBudget;
+        if (formData.maxBudget) params.maxBudget = formData.maxBudget;
 
-        try {
-          const res = await fetch(`${baseUrl}/api/brands?${params.toString()}`);
-          if (!res.ok) throw new Error('Brand search failed');
-          
-          const data = await res.json();
-          console.log('Brand search results:', data); // For debugging
-          setResults(data.results || []);
-          
-          if (!data.results || data.results.length === 0) {
-            // Show latest brands if no results
-            const latestRes = await fetch(`${baseUrl}/api/brands/all`);
-            if (latestRes.ok) {
-              const latestData = await latestRes.json();
-              console.log('Latest brands results:', latestData); // For debugging
-              setResults(latestData.results || []);
-            }
-          }
-        } catch (brandError) {
-          console.error('Brand search error:', brandError);
-          throw new Error('Failed to search brands');
+        const data = await searchService.searchBrands(params);
+        console.log('Brand search results:', data);
+        setResults(data.results || []);
+        
+        if (!data.results || data.results.length === 0) {
+          // Show latest brands if no results
+          const latestData = await searchService.getAllBrands({ limit: 20 });
+          console.log('Latest brands results:', latestData);
+          setResults(latestData.results || []);
         }
       }
     } catch (err: any) {
       toast.error(err.message || 'An error occurred during search.');
       // Show latest results as fallback
       try {
-        const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-        const fallbackRes = await fetch(`${baseUrl}/api/${searchType}/all`);
-        if (fallbackRes.ok) {
-          const fallbackData = await fallbackRes.json();
+        if (searchType === 'influencers') {
+          const fallbackData = await searchService.getAllInfluencers({ limit: 20 });
+          setResults(fallbackData.results || []);
+        } else {
+          const fallbackData = await searchService.getAllBrands({ limit: 20 });
           setResults(fallbackData.results || []);
         }
       } catch (fallbackError) {
@@ -239,15 +214,6 @@ const SearchPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="text-center">
-            <button 
-              type="button" 
-              onClick={() => setShowFilters(!showFilters)}
-              className="text-sm text-primary hover:underline"
-            >
-              {showFilters ? 'Hide Filters' : 'Show Filters'}
-            </button>
-          </div>
 
           {/* Search Results */}
           {loading ? (

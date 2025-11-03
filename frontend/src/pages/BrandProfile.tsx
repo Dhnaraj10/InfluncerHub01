@@ -176,6 +176,11 @@ const BrandProfile: React.FC = () => {
       setProfileExists(true);
       setIsEditMode(false);
       toast.success("Profile saved successfully");
+      
+      // Navigate to the public brand profile page after saving
+      if (user?._id) {
+        navigate(`/brand/${user._id}`);
+      }
     } catch (err: any) {
       console.error('Profile save error:', err);
       toast.error(err.message || "Failed to save profile");
@@ -334,7 +339,7 @@ const BrandProfile: React.FC = () => {
                     }
                   })}
                   className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="contact@company.com"
+                  placeholder="contact@yourcompany.com"
                 />
                 {errors.contactEmail && (
                   <p className="mt-1 text-sm text-red-600">{errors.contactEmail.message}</p>
@@ -343,11 +348,11 @@ const BrandProfile: React.FC = () => {
 
               <div>
                 <label htmlFor="budgetPerPost" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Budget Per Post (₹)
+                  Budget per Post (₹)
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                    ₹
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">₹</span>
                   </div>
                   <input
                     type="number"

@@ -165,9 +165,32 @@ export const searchInfluencers = async (req, res) => {
   }
 };
 
+// Get all influencers (latest)
+export const getAllInfluencers = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, sort = "-createdAt" } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    
+    const docs = await InfluencerProfile.find()
+      .populate("user", ["name", "avatar"])
+      .populate("categories", "name")
+      .sort(sort)
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await InfluencerProfile.countDocuments();
+
+    res.json({ total, page: Number(page), limit: Number(limit), results: docs });
+  } catch (err) {
+    console.error("Error fetching all influencers:", err.message);
+    res.status(500).send("Server error");
+  }
+};
+
 export default {
   createOrUpdateProfile,
   getMyProfile,
   getProfileByHandle,
   searchInfluencers,
+  getAllInfluencers,
 };

@@ -181,6 +181,26 @@ export const searchBrands = async (req, res) => {
   }
 };
 
+// Get all brands (latest)
+export const getAllBrands = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    
+    const docs = await BrandProfile.find()
+      .populate('user', ['name', 'email', 'avatar'])
+      .sort('-createdAt')
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await BrandProfile.countDocuments();
+
+    res.json({ total, page: Number(page), limit: Number(limit), results: docs });
+  } catch (err) {
+    console.error('Error fetching all brands:', err.message);
+    res.status(500).send('Server error');
+  }
+};
+
 // Delete brand profile
 export const deleteProfile = async (req, res) => {
   try {

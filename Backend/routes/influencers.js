@@ -19,4 +19,7 @@ router.get("/handle/:handle", influencerController.getProfileByHandle);
 // Search influencers
 router.get("/", influencerController.searchInfluencers);
 
+// Get all influencers (latest)
+router.get("/all", influencerController.getAllInfluencers);
+
 export default router;

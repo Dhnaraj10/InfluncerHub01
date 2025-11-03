@@ -2,7 +2,7 @@
 import express from "express";
 import auth from "../middleware/authMiddleware.js";
 import role from "../middleware/roleMiddleware.js";
-import { createOrUpdateProfile, deleteProfile, getMyProfile, getProfileById, searchBrands } 
+import { createOrUpdateProfile, deleteProfile, getMyProfile, getProfileById, searchBrands, getAllBrands } 
   from "../controllers/brandController.js";
 
 const router = express.Router();
@@ -19,6 +19,9 @@ router.get("/:userId", getProfileById);
 
 // Search brands
 router.get("/", searchBrands);
+
+// Get all brands (latest)
+router.get("/all", getAllBrands);
 
 // Delete brand profile
 router.delete("/me", auth, role(["brand"]), deleteProfile);

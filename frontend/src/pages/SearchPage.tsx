@@ -47,17 +47,32 @@ const SearchPage: React.FC = () => {
 
   // Load initial results when page loads or search type changes
   useEffect(() => {
-    performSearch({ 
-      query: '', 
-      minFollowers: '', 
-      maxFollowers: '', 
-      categories: [], 
-      tags: [],
-      industry: '',
-      minBudget: '',
-      maxBudget: ''
-    });
+    loadInitialResults();
   }, [searchType]);
+
+  const loadInitialResults = async () => {
+    setLoading(true);
+    try {
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      
+      if (searchType === 'influencers') {
+        const res = await fetch(`${baseUrl}/api/influencers/all`);
+        if (!res.ok) throw new Error('Failed to load influencers');
+        const data = await res.json();
+        setResults(data.results || []);
+      } else {
+        const res = await fetch(`${baseUrl}/api/brands/all`);
+        if (!res.ok) throw new Error('Failed to load brands');
+        const data = await res.json();
+        setResults(data.results || []);
+      }
+    } catch (err: any) {
+      console.error('Error loading initial results:', err);
+      toast.error(err.message || 'Failed to load results');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const performSearch = async (formData: SearchFormValues) => {
     setLoading(true);
@@ -79,7 +94,7 @@ const SearchPage: React.FC = () => {
 
         if ((data.results || []).length === 0) {
           // Show latest influencers if no results
-          const latestRes = await fetch(`${baseUrl}/api/influencers`);
+          const latestRes = await fetch(`${baseUrl}/api/influencers/all`);
           if (latestRes.ok) {
             const latestData = await latestRes.json();
             setResults(latestData.results || []);
@@ -103,7 +118,7 @@ const SearchPage: React.FC = () => {
           
           if (!data.results || data.results.length === 0) {
             // Show latest brands if no results
-            const latestRes = await fetch(`${baseUrl}/api/brands`);
+            const latestRes = await fetch(`${baseUrl}/api/brands/all`);
             if (latestRes.ok) {
               const latestData = await latestRes.json();
               console.log('Latest brands results:', latestData); // For debugging
@@ -120,7 +135,7 @@ const SearchPage: React.FC = () => {
       // Show latest results as fallback
       try {
         const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-        const fallbackRes = await fetch(`${baseUrl}/api/${searchType}`);
+        const fallbackRes = await fetch(`${baseUrl}/api/${searchType}/all`);
         if (fallbackRes.ok) {
           const fallbackData = await fallbackRes.json();
           setResults(fallbackData.results || []);
@@ -265,10 +280,10 @@ const SearchPage: React.FC = () => {
                     No {searchType} found matching your criteria
                   </div>
                   <button 
-                    onClick={() => reset()}
+                    onClick={loadInitialResults}
                     className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
                   >
-                    Clear Filters
+                    Show All {searchType}
                   </button>
                 </div>
               )}

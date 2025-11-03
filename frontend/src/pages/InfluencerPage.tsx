@@ -1,8 +1,8 @@
 // frontend/src/pages/InfluencerPage.tsx
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { InfluencerProfile } from "../types/types";
-import { AuthContext, AuthContextType } from "../AuthContext";
+import { useAuth } from "../useAuth";
 import toast from "react-hot-toast";
 import SponsorshipModal from "../components/SponsorshipModal";
 import axios from "axios";
@@ -17,14 +17,7 @@ const InfluencerPage: React.FC = () => {
   const { handle } = useParams<{ handle: string }>();
   const location = useLocation();
   
-  const context = useContext(AuthContext);
-  
-  // Check if context is available
-  if (!context) {
-    throw new Error('InfluencerPage must be used within an AuthProvider');
-  }
-  
-  const { user, token } = context;
+  const { user, token } = useAuth();
 
   const [influencer, setInfluencer] = useState<InfluencerProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +37,7 @@ const InfluencerPage: React.FC = () => {
     const fetchInfluencer = async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/influencers/handle/${handle}`,
+          `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/handle/${handle}`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           }
@@ -81,7 +74,7 @@ const InfluencerPage: React.FC = () => {
         deliverables: sponsorshipData.deliverables
       };
       
-      await axios.post('http://localhost:5000/api/sponsorships', data, config);
+      await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sponsorships`, data, config);
       toast.success("Sponsorship offer sent successfully!");
       setIsModalOpen(false);
     } catch (error: any) {

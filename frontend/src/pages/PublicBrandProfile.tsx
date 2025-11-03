@@ -45,7 +45,7 @@ const PublicBrandProfile: React.FC = () => {
       try {
         setLoading(true);
         const response = await axios.get<BrandProfile>(
-          `http://localhost:5000/api/brands/${brandId}`
+          `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands/${brandId}`
         );
         setBrandProfile(response.data);
       } catch (err: any) {

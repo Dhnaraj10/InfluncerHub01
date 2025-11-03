@@ -34,10 +34,13 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:5000',
       'https://influncerhub.vercel.app',
-      'https://influncerhub-mbsroihhg-dhanraj-singhs-projects.vercel.app',
-      // Add your actual frontend URL here
-      process.env.FRONTEND_ORIGIN
-    ].filter(Boolean); // Remove any falsy values
+      'https://influncerhub-mbsroihhg-dhanraj-singhs-projects.vercel.app'
+    ];
+    
+    // Add FRONTEND_ORIGIN if it's set
+    if (process.env.FRONTEND_ORIGIN) {
+      allowedOrigins.push(process.env.FRONTEND_ORIGIN);
+    }
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);

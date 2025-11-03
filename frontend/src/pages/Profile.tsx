@@ -406,7 +406,7 @@ const Profile: React.FC = () => {
             <div className="flex items-center space-x-6">
               <div className="relative">
                 <img
-                  src={avatarPreview || "https://via.placeholder.com/150"}
+                  src={avatarPreview || "https://placehold.co/150"}
                   alt="Profile"
                   className="w-24 h-24 rounded-full object-cover border-2 border-gray-300"
                 />
@@ -644,7 +644,7 @@ const Profile: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div className="flex items-center space-x-4">
                   <img
-                    src={getValues("avatarUrl") || "https://via.placeholder.com/150"}
+                    src={getValues("avatarUrl") || "https://placehold.co/150"}
                     alt="Profile"
                     className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
                   />

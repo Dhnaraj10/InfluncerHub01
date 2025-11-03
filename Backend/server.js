@@ -25,7 +25,26 @@ app.use(express.json());
 
 // Configure CORS to allow frontend requests
 const corsOptions = {
-  origin: process.env.FRONTEND_ORIGIN || "http://localhost:3000",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5000',
+      'https://influncerhub.vercel.app',
+      'https://influncerhub-mbsroihhg-dhanraj-singhs-projects.vercel.app',
+      // Add your actual frontend URL here
+      process.env.FRONTEND_ORIGIN
+    ].filter(Boolean); // Remove any falsy values
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };

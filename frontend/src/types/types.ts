@@ -102,8 +102,19 @@ export interface InfluencerProfile {
 // -------- SPONSORSHIP --------
 export interface Sponsorship {
   _id: string;
-  brand: { _id: string; name: string } | string;
-  influencer?: { _id: string; handle: string } | string;
+  brand: { 
+    _id: string; 
+    user: { _id: string; name: string; email: string } | string;
+    companyName: string;
+    contactEmail: string;
+    name: string;
+  } | string;
+  influencer?: { 
+    _id: string; 
+    user: { _id: string; name: string } | string;
+    handle: string;
+    name: string;
+  } | string;
   influencerProfile?: string;
   status: "pending" | "accepted" | "rejected" | "completed" | "cancelled";
   title: string;

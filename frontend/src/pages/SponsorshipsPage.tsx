@@ -1,4 +1,4 @@
-// frontend/src/pages/SponsorshipsPage.tsx
+// frontend/src/pages\SponsorshipsPage.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { Sponsorship } from "../types/types";
 import { useAuth } from "../useAuth";
@@ -103,232 +103,195 @@ const SponsorshipDashboard: React.FC = () => {
       });
       if (res2.ok) {
         const data = await res2.json();
-        
-        // Convert PartialSponsorship[] to Sponsorship[] by adding missing fields
-        const fullSponsorships: Sponsorship[] = data.map((s: PartialSponsorship) => ({
-          ...s,
-          updatedAt: s.updatedAt || s.createdAt || new Date().toISOString()
-        }));
-        
-        setSponsorships(fullSponsorships);
+        setSponsorships(data);
       }
     } catch (err: any) {
-      toast.error(err.message || "Error updating sponsorship");
+      toast.error(err.message || `Error ${action}ing sponsorship`);
     }
   };
 
-  const filteredSponsorships =
-    filter === "all" ? sponsorships : sponsorships.filter((s) => s.status === filter);
+  const filteredSponsorships = sponsorships.filter(s => {
+    if (filter === "all") return true;
+    return s.status === filter;
+  });
 
-  // Format budget with INR currency
-  const formatBudget = (budget?: number) => {
-    if (!budget) return "Not specified";
-    return `₹${budget.toLocaleString()}`;
-  };
-
-  // Get brand ID from sponsorship object
-  const getBrandId = useCallback((sponsorship: Sponsorship | PartialSponsorship): string | null => {
-    if (typeof sponsorship.brand === 'object' && sponsorship.brand !== null) {
-      // Use the user ID instead of the brand profile ID for public profile links
-      if ('user' in sponsorship.brand && sponsorship.brand.user) {
-        // If user is an object with _id property
-        if (typeof sponsorship.brand.user === 'object' && '_id' in sponsorship.brand.user) {
-          return sponsorship.brand.user._id as string;
-        }
-        // If user is directly the user ID string
-        if (typeof sponsorship.brand.user === 'string') {
-          return sponsorship.brand.user;
-        }
-      }
-    }
-    return null;
-  }, []);
-
-  // Get brand name from sponsorship object
-  const getBrandName = useCallback((sponsorship: Sponsorship | PartialSponsorship): string => {
-    // Handle case where brand is a populated object
-    if (typeof sponsorship.brand === 'object' && sponsorship.brand !== null) {
-      // Try to get the company name first
-      if ('companyName' in sponsorship.brand && sponsorship.brand.companyName) {
-        return sponsorship.brand.companyName as string;
-      }
-      // Try to get the email directly
-      if ('contactEmail' in sponsorship.brand && sponsorship.brand.contactEmail) {
-        return sponsorship.brand.contactEmail as string;
-      }
-      return "Unknown Brand";
-    }
-    // Handle case where brand is a string (ID or name)
-    if (typeof sponsorship.brand === 'string') {
-      return sponsorship.brand || "Unknown Brand";
-    }
-    return "Unknown Brand";
-  }, []);
-
-  if (loading && sponsorships.length === 0) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading sponsorships...
+      <div className="min-h-screen bg-gradient-to-b from-background-light to-white dark:from-gray-900 dark:to-gray-900 py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Sponsorships</h1>
+          </div>
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background-light to-white dark:from-background-dark dark:to-gray-900 py-12 px-4">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-          <h1 className="text-3xl font-display font-bold text-gray-900 dark:text-white">
-            {user?.role === "brand" ? "My Sponsorships" : "My Sponsorship Offers"}
-          </h1>
-          
+    <div className="min-h-screen bg-gradient-to-b from-background-light to-white dark:from-gray-900 dark:to-gray-900 py-12 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Sponsorships</h1>
           {user?.role === "brand" && (
             <button
-              onClick={() => navigate("/sponsorships/create")}
-              className="mt-4 sm:mt-0 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+              onClick={() => navigate("/create-sponsorship")}
+              className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-full shadow-lg hover:opacity-90 transition flex items-center justify-center"
             >
-              <FaPlus /> Create Sponsorship
+              <FaPlus className="mr-2" />
+              Create Sponsorship
             </button>
           )}
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-3 mb-8">
-          {["all", "pending", "accepted", "rejected", "completed", "cancelled"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab as any)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                filter === tab
-                  ? "bg-primary text-white shadow"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
+        {/* Status Filter */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-2">
+            {(["all", "pending", "accepted", "rejected", "completed", "cancelled"] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilter(status)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                  filter === status
+                    ? "bg-primary text-white"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Sponsorship List */}
         {filteredSponsorships.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600 dark:text-gray-400">
-              No {filter === "all" ? "" : filter} sponsorships found.
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+            <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">No sponsorships found</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {filter === "all" 
+                ? "You don't have any sponsorships yet." 
+                : `You don't have any ${filter} sponsorships.`}
             </p>
             {user?.role === "brand" && (
               <button
-                onClick={() => navigate("/sponsorships/create")}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                onClick={() => navigate("/create-sponsorship")}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
               >
-                <FaPlus /> Create Your First Sponsorship
+                Create Your First Sponsorship
               </button>
             )}
           </div>
         ) : (
-          <div className="space-y-6">
-            {filteredSponsorships.map((s) => (
-              <div
-                key={s._id}
-                className="p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-md"
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredSponsorships.map((sponsorship) => (
+              <div 
+                key={sponsorship._id} 
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition"
               >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                  <div className="flex-1">
-                    {user?.role === "influencer" ? (
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-medium text-gray-700 dark:text-gray-300">
-                          Brand:
-                        </span>
-                        <span className="font-medium text-lg text-gray-900 dark:text-white">
-                          {getBrandName(s)}
-                        </span>
-                        {getBrandId(s) && (
-                          <Link 
-                            to={`/brand/${getBrandId(s)}`}
-                            className="flex items-center gap-1 px-2 py-1 text-xs bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition"
-                          >
-                            <FaEye /> View Profile
-                          </Link>
-                        )}
-                      </div>
-                    ) : null}
-                    
-                    {user?.role === "brand" ? (
-                      <p className="font-medium text-lg text-gray-900 dark:text-white mb-2">
-                        Influencer: {typeof s.influencer === "string" ? s.influencer : s.influencer?.handle || "Unknown"}
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+                      {sponsorship.title}
+                    </h3>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      sponsorship.status === "pending" 
+                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                        : sponsorship.status === "accepted"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
+                        : sponsorship.status === "completed"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                        : sponsorship.status === "rejected" || sponsorship.status === "cancelled"
+                        ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100"
+                    }`}>
+                      {sponsorship.status}
+                    </span>
+                  </div>
+                  
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
+                    {sponsorship.description || "No description provided"}
+                  </p>
+                  
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Budget</p>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {sponsorship.budget ? `₹${sponsorship.budget}` : "Not specified"}
                       </p>
-                    ) : null}
-                    
-                    <h3 className="font-bold text-xl mt-1 text-gray-900 dark:text-white">{s.title}</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mt-2">{s.description}</p>
-                    
-                    <div className="mt-3 flex items-center gap-4">
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        Budget: <span className="font-medium">{formatBudget(s.budget)}</span>
-                      </p>
-                      <span
-                        className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                          s.status === "pending"
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                            : s.status === "accepted"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : s.status === "rejected"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                            : s.status === "completed"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                        }`}
-                      >
-                        {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
-                      </span>
                     </div>
-                    
-                    {s.deliverables && s.deliverables.length > 0 ? (
-                      <div className="mt-3">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Deliverables:</p>
-                        <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {s.deliverables.map((d, i) => (
-                            <li key={i}>{d}</li>
-                          ))}
-                        </ul>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Created</p>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {new Date(sponsorship.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Brand/Influencer Info */}
+                  <div className="mb-6">
+                    {user?.role === "influencer" && typeof sponsorship.brand === "object" ? (
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">From</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {sponsorship.brand.name || sponsorship.brand.companyName || "Unknown Brand"}
+                        </p>
+                      </div>
+                    ) : user?.role === "brand" && typeof sponsorship.influencer === "object" ? (
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">To</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {sponsorship.influencer.name || sponsorship.influencer.handle || "Unknown Influencer"}
+                        </p>
                       </div>
                     ) : null}
                   </div>
-
-                  {/* Actions */}
-                  <div className="mt-4 md:mt-0 flex flex-col gap-2 min-w-[150px]">
-                    {user?.role === "influencer" && s.status === "pending" ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleAction(s._id, "accept")}
-                          className="px-3 py-1 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition flex-1"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleAction(s._id, "reject")}
-                          className="px-3 py-1 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition flex-1"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : null}
+                  
+                  {/* Action Buttons */}
+                  <div className="flex justify-between">
+                    <button
+                      onClick={() => navigate(`/sponsorships/${sponsorship._id}`)}
+                      className="flex items-center text-sm text-primary hover:text-primary-dark"
+                    >
+                      <FaEye className="mr-1" />
+                      View
+                    </button>
                     
-                    {user?.role === "brand" && s.status === "pending" ? (
+                    {user?.role === "brand" && sponsorship.status === "pending" && (
                       <button
-                        onClick={() => handleAction(s._id, "cancel")}
-                        className="px-3 py-1 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
+                        onClick={() => handleAction(sponsorship._id, "cancel")}
+                        className="text-sm text-red-600 hover:text-red-800 dark:hover:text-red-400"
                       >
                         Cancel
                       </button>
-                    ) : null}
+                    )}
                     
-                    {user?.role === "brand" && s.status === "accepted" ? (
+                    {user?.role === "brand" && sponsorship.status === "accepted" && (
                       <button
-                        onClick={() => handleAction(s._id, "complete")}
-                        className="px-3 py-1 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+                        onClick={() => handleAction(sponsorship._id, "complete")}
+                        className="text-sm text-green-600 hover:text-green-800 dark:hover:text-green-400"
                       >
-                        Mark Complete
+                        Complete
                       </button>
-                    ) : null}
+                    )}
+                    
+                    {user?.role === "influencer" && sponsorship.status === "pending" && (
+                      <div className="space-x-2">
+                        <button
+                          onClick={() => handleAction(sponsorship._id, "reject")}
+                          className="text-sm text-red-600 hover:text-red-800 dark:hover:text-red-400"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          onClick={() => handleAction(sponsorship._id, "accept")}
+                          className="text-sm text-green-600 hover:text-green-800 dark:hover:text-green-400"
+                        >
+                          Accept
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

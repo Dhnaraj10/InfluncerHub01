@@ -29,7 +29,10 @@ const Signup: React.FC = () => {
     try {
       await signup(data.name, data.email, data.password, data.role);
       toast.success("Account created!");
-      navigate("/dashboard");
+      // Small delay to ensure state is updated before navigation
+      setTimeout(() => {
+        navigate("/dashboard", { replace: true });
+      }, 100);
     } catch (err: any) {
       setLoading(false);
       // Show specific error messages based on the error

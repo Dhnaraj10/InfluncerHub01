@@ -1,6 +1,6 @@
 // frontend/src/pages/InfluencerPage.tsx
 import React, { useEffect, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { InfluencerProfile } from "../types/types";
 import { useAuth } from "../useAuth";
 import toast from "react-hot-toast";
@@ -16,6 +16,7 @@ const normalizeUrl = (url?: string) => {
 const InfluencerPage: React.FC = () => {
   const { handle } = useParams<{ handle: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   
   const { user, token } = useAuth();
 
@@ -77,6 +78,8 @@ const InfluencerPage: React.FC = () => {
       await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sponsorships`, data, config);
       toast.success("Sponsorship offer sent successfully!");
       setIsModalOpen(false);
+      // Redirect to sponsorships page after successful creation
+      navigate("/sponsorships");
     } catch (error: any) {
       console.error("Error creating sponsorship:", error);
       toast.error(error.response?.data?.message || "Failed to send sponsorship offer");

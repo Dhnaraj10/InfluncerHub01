@@ -42,9 +42,16 @@ const corsOptions = {
       allowedOrigins.push(process.env.FRONTEND_ORIGIN);
     }
     
+    // Also allow any vercel.app subdomain for flexibility
+    if (origin && origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      // Log the origin for debugging
+      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },

@@ -108,60 +108,76 @@ export const getProfileById = async (req, res) => {
 
 // Get all brands with search, filter, and pagination
 export const searchBrands = async (req, res) => {
-  const { q, industry, minBudget, maxBudget, page = 1, limit = 10 } = req.query;
-  
-  // If no search query, show top 10 latest brands
-  if (!q && !industry && !minBudget && !maxBudget) {
-    try {
-      const docs = await BrandProfile.find({})
-        .populate('user', ['name', 'email'])
-        .sort('-createdAt')
-        .limit(10);
-
-      res.json({ total: docs.length, page: 1, limit: 10, results: docs });
-      return;
-    } catch (err) {
-      console.error('Error fetching latest brands:', err.message);
-      return res.status(500).send('Server error');
-    }
-  }
-
-  const filter = {};
-
-  // Text search
-  if (q) {
-    filter.$or = [
-      { companyName: { $regex: q, $options: 'i' } },
-      { description: { $regex: q, $options: 'i' } },
-      { industry: { $regex: q, $options: 'i' } }
-    ];
-  }
-
-  // Industry filter
-  if (industry) {
-    filter.industry = industry;
-  }
-
-  // Budget filters
-  if (minBudget || maxBudget) {
-    filter.budgetPerPost = {};
-    if (minBudget) filter.budgetPerPost.$gte = Number(minBudget);
-    if (maxBudget) filter.budgetPerPost.$lte = Number(maxBudget);
-  }
-
   try {
+    const { q, industry, minBudget, maxBudget, page = 1, limit = 10 } = req.query;
+    
+    // Build filter criteria
+    const filter = {};
+    
+    // Text search across multiple fields
+    if (q) {
+      filter.$or = [
+        { companyName: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { industry: { $regex: q, $options: 'i' } }
+      ];
+    }
+    
+    // Industry filter
+    if (industry) {
+      filter.industry = industry;
+    }
+    
+    // Budget range filter
+    if (minBudget || maxBudget) {
+      filter.budgetPerPost = {};
+      if (minBudget) filter.budgetPerPost.$gte = Number(minBudget);
+      if (maxBudget) filter.budgetPerPost.$lte = Number(maxBudget);
+    }
+    
+    // If no filters are provided, get latest brands
+    if (!q && !industry && !minBudget && !maxBudget) {
+      const docs = await BrandProfile.find()
+        .populate('user', ['name', 'email', 'avatar'])
+        .sort('-createdAt')
+        .limit(10)
+        .lean();
+        
+      return res.json({ 
+        total: docs.length, 
+        page: 1, 
+        limit: 10, 
+        results: docs 
+      });
+    }
+    
+    // Apply filters with pagination
+    const pageNumber = Math.max(1, Number(page));
+    const pageSize = Math.min(50, Number(limit)); // Limit maximum results per page
+    
     const docs = await BrandProfile.find(filter)
-      .populate('user', ['name', 'email'])
+      .populate('user', ['name', 'email', 'avatar'])
       .sort('-createdAt')
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
+      .skip((pageNumber - 1) * pageSize)
+      .limit(pageSize)
+      .lean();
+      
+    // Get total count matching the filter
     const total = await BrandProfile.countDocuments(filter);
-
-    res.json({ total, page: Number(page), limit: Number(limit), results: docs });
-  } catch (err) {
-    console.error('Error searching brands:', err.message);
-    res.status(500).send('Server error');
+    
+    res.json({ 
+      total, 
+      page: pageNumber, 
+      limit: pageSize, 
+      results: docs 
+    });
+    
+  } catch (error) {
+    console.error('Error in brand search:', error);
+    res.status(500).json({ 
+      error: 'Server error',
+      message: error.message 
+    });
   }
 };
 

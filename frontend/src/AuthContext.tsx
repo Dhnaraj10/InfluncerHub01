@@ -148,6 +148,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       localStorage.setItem("token", data.token);
       setUser(data.user);
       setIsAuthenticated(true);
+
+      return Promise.resolve(data);
     } catch (error) {
       console.error("Signup error:", error); // For debugging
       

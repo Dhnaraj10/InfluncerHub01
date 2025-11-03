@@ -98,6 +98,7 @@ const SearchPage: React.FC = () => {
           if (!res.ok) throw new Error('Brand search failed');
           
           const data = await res.json();
+          console.log('Brand search results:', data); // For debugging
           setResults(data.results || []);
           
           if (!data.results || data.results.length === 0) {
@@ -105,6 +106,7 @@ const SearchPage: React.FC = () => {
             const latestRes = await fetch(`${baseUrl}/api/brands`);
             if (latestRes.ok) {
               const latestData = await latestRes.json();
+              console.log('Latest brands results:', latestData); // For debugging
               setResults(latestData.results || []);
             }
           }
@@ -115,6 +117,17 @@ const SearchPage: React.FC = () => {
       }
     } catch (err: any) {
       toast.error(err.message || 'An error occurred during search.');
+      // Show latest results as fallback
+      try {
+        const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const fallbackRes = await fetch(`${baseUrl}/api/${searchType}`);
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          setResults(fallbackData.results || []);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback search error:', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
@@ -136,6 +149,19 @@ const SearchPage: React.FC = () => {
     });
     // Update URL
     navigate(`/search?type=${type}`);
+  };
+
+  // Transform influencer data to match InfluencerCard props
+  const transformInfluencerData = (influencer: InfluencerProfile) => {
+    return {
+      id: influencer._id,
+      name: influencer.user?.name || 'Unknown',
+      followers: influencer.followerCount,
+      engagementRate: influencer.engagementRate || 0,
+      imageUrl: influencer.avatarUrl || '',
+      categories: influencer.categories?.map(cat => cat.name) || [],
+      handle: influencer.handle || ''
+    };
   };
 
   return (
@@ -201,274 +227,54 @@ const SearchPage: React.FC = () => {
           <div className="text-center">
             <button 
               type="button" 
-              onClick={() => setShowFilters(!showFilters)} 
-              className="text-primary dark:text-primary-light font-medium flex items-center justify-center mx-auto"
+              onClick={() => setShowFilters(!showFilters)}
+              className="text-sm text-primary hover:underline"
             >
-              {showFilters ? (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                  </svg>
-                  Hide Filters
-                </>
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                  Show Filters
-                </>
-              )}
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
             </button>
           </div>
 
-          {showFilters && (
-            <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {searchType === 'influencers' ? (
-                <>
-                  {/* Followers */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Follower Count</label>
-                    <div className="flex gap-4 mt-1">
-                      <input 
-                        type="number" 
-                        {...register("minFollowers")} 
-                        placeholder="Min" 
-                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                      />
-                      <input 
-                        type="number" 
-                        {...register("maxFollowers")} 
-                        placeholder="Max" 
-                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                      />
-                    </div>
-                  </div>
-
-                  {/* Categories */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Categories</label>
-                    <div className="mt-1 flex">
-                      <input 
-                        type="text" 
-                        value={categoryInput}
-                        onChange={(e) => setCategoryInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && categoryInput.trim() !== '') {
-                            e.preventDefault();
-                            const categories = (document.querySelector('input[name="categories"]') as HTMLInputElement)?.value || '[]';
-                            const currentCategories = JSON.parse(categories);
-                            if (!currentCategories.includes(categoryInput.trim())) {
-                              currentCategories.push(categoryInput.trim());
-                              (document.querySelector('input[name="categories"]') as HTMLInputElement).value = JSON.stringify(currentCategories);
-                            }
-                            setCategoryInput('');
-                          }
-                        }}
-                        placeholder="Add a category" 
-                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          if (categoryInput.trim() !== '') {
-                            const categories = (document.querySelector('input[name="categories"]') as HTMLInputElement)?.value || '[]';
-                            const currentCategories = JSON.parse(categories);
-                            if (!currentCategories.includes(categoryInput.trim())) {
-                              currentCategories.push(categoryInput.trim());
-                              (document.querySelector('input[name="categories"]') as HTMLInputElement).value = JSON.stringify(currentCategories);
-                            }
-                            setCategoryInput('');
-                          }
-                        }}
-                        className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 rounded-r-lg hover:bg-gray-300 dark:hover:bg-gray-500"
-                      >
-                        Add
-                      </button>
-                    </div>
-                    <Controller
-                      name="categories"
-                      control={control}
-                      render={({ field }) => (
-                        <input type="hidden" {...field} value={JSON.stringify(field.value)} />
-                      )}
-                    />
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {JSON.parse((document.querySelector('input[name="categories"]') as HTMLInputElement)?.value || '[]').map((cat: string, index: number) => (
-                        <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
-                          {cat}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const categories = JSON.parse((document.querySelector('input[name="categories"]') as HTMLInputElement)?.value || '[]');
-                              const newCategories = categories.filter((c: string) => c !== cat);
-                              (document.querySelector('input[name="categories"]') as HTMLInputElement).value = JSON.stringify(newCategories);
-                              reset({ ...JSON.parse(JSON.stringify(control._formValues)), categories: newCategories });
-                            }}
-                            className="ml-2 text-primary hover:text-primary-dark"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tags</label>
-                    <div className="mt-1 flex">
-                      <input 
-                        type="text" 
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && tagInput.trim() !== '') {
-                            e.preventDefault();
-                            const tags = (document.querySelector('input[name="tags"]') as HTMLInputElement)?.value || '[]';
-                            const currentTags = JSON.parse(tags);
-                            if (!currentTags.includes(tagInput.trim())) {
-                              currentTags.push(tagInput.trim());
-                              (document.querySelector('input[name="tags"]') as HTMLInputElement).value = JSON.stringify(currentTags);
-                            }
-                            setTagInput('');
-                          }
-                        }}
-                        placeholder="Add a tag" 
-                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          if (tagInput.trim() !== '') {
-                            const tags = (document.querySelector('input[name="tags"]') as HTMLInputElement)?.value || '[]';
-                            const currentTags = JSON.parse(tags);
-                            if (!currentTags.includes(tagInput.trim())) {
-                              currentTags.push(tagInput.trim());
-                              (document.querySelector('input[name="tags"]') as HTMLInputElement).value = JSON.stringify(currentTags);
-                            }
-                            setTagInput('');
-                          }
-                        }}
-                        className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 rounded-r-lg hover:bg-gray-300 dark:hover:bg-gray-500"
-                      >
-                        Add
-                      </button>
-                    </div>
-                    <Controller
-                      name="tags"
-                      control={control}
-                      render={({ field }) => (
-                        <input type="hidden" {...field} value={JSON.stringify(field.value)} />
-                      )}
-                    />
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {JSON.parse((document.querySelector('input[name="tags"]') as HTMLInputElement)?.value || '[]').map((tag: string, index: number) => (
-                        <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-secondary/10 text-secondary">
-                          {tag}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const tags = JSON.parse((document.querySelector('input[name="tags"]') as HTMLInputElement)?.value || '[]');
-                              const newTags = tags.filter((t: string) => t !== tag);
-                              (document.querySelector('input[name="tags"]') as HTMLInputElement).value = JSON.stringify(newTags);
-                              reset({ ...JSON.parse(JSON.stringify(control._formValues)), tags: newTags });
-                            }}
-                            className="ml-2 text-secondary hover:text-secondary-dark"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Industry */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Industry</label>
-                    <input 
-                      type="text" 
-                      {...register("industry")} 
-                      placeholder="e.g., Fashion, Technology, Food" 
-                      className="w-full mt-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                    />
-                  </div>
-
-                  {/* Budget */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Budget Per Post</label>
-                    <div className="flex gap-4 mt-1">
-                      <input 
-                        type="number" 
-                        {...register("minBudget")} 
-                        placeholder="Min" 
-                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                      />
-                      <input 
-                        type="number" 
-                        {...register("maxBudget")} 
-                        placeholder="Max" 
-                        className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          <div className="text-center">
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-medium rounded-full shadow-lg hover:opacity-90 transition disabled:opacity-50"
-            >
-              {loading ? 'Searching...' : 'Search'}
-            </button>
-          </div>
-        </form>
-
-        {/* Results */}
-        <div>
+          {/* Search Results */}
           {loading ? (
-            <div className="flex justify-center items-center h-64">
+            <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
             </div>
-          ) : results.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {searchType === 'influencers' ? (
-                results.map((influencer: InfluencerProfile) => (
-                  <InfluencerCard 
-                    key={influencer._id}
-                    id={influencer._id}
-                    name={influencer.user?.name || influencer.handle}
-                    followers={influencer.followerCount}
-                    engagementRate={influencer.averageEngagementRate || 0}
-                    imageUrl={influencer.avatarUrl || influencer.user?.avatar || ""}
-                    categories={influencer.categories?.map(cat => cat.name) || []}
-                    handle={influencer.handle}
-                  />
-                ))
-              ) : (
-                results.map((brand: BrandProfile) => (
-                  <BrandCard key={brand._id} brand={brand} />
-                ))
-              )}
-            </div>
           ) : (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No Results Found</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Try adjusting your search filters or query.
-              </p>
-            </div>
+            <>
+              <div className="mb-4 text-center text-gray-600 dark:text-gray-400">
+                Found {results.length} {searchType}
+              </div>
+              
+              {results.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {searchType === 'influencers' 
+                    ? results.map((influencer: InfluencerProfile) => (
+                        <InfluencerCard 
+                          key={influencer._id} 
+                          {...transformInfluencerData(influencer)} 
+                        />
+                      ))
+                    : results.map((brand: BrandProfile) => (
+                        <BrandCard key={brand._id} brand={brand} />
+                      ))
+                  }
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-gray-500 dark:text-gray-400 mb-4">
+                    No {searchType} found matching your criteria
+                  </div>
+                  <button 
+                    onClick={() => reset()}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
+            </>
           )}
-        </div>
+        </form>
       </div>
     </div>
   );

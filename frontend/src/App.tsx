@@ -53,6 +53,14 @@ function App() {
           <Route path="/contact-brand/:id" element={<ContactBrandPage />} />
           <Route path="/brands" element={<ForBrandsPage />} />
           <Route path="/influencers" element={<ForInfluencersPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/careers" element={<CareersPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/cookies" element={<CookiesPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </MainLayout>

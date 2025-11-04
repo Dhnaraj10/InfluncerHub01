@@ -1,7 +1,12 @@
 import { WebSocketServer } from "ws";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
 // Placeholder for the WebSocket server instance
 let wss;
+
+// Store connected clients with their user IDs
+const clients = new Map();
 
 /**
  * Initialize WebSocket server and attach it to the HTTP server
@@ -10,10 +15,87 @@ let wss;
 export const initializeWebSocketServer = (server) => {
   wss = new WebSocketServer({ server });
 
-  wss.on("connection", (ws) => {
+  wss.on("connection", (ws, request) => {
     console.log("New client connected");
+    
+    // Extract token from query parameters or headers
+    const url = new URL(request.url, `http://${request.headers.host}`);
+    const token = url.searchParams.get('token') || 
+                  (request.headers.authorization && request.headers.authorization.startsWith('Bearer ') 
+                    ? request.headers.authorization.substring(7) 
+                    : null);
+    
+    if (token) {
+      // Authenticate user immediately upon connection
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        ws.userId = decoded.id;
+        clients.set(ws.userId, ws);
+        console.log(`User ${decoded.id} authenticated on connection`);
+      } catch (err) {
+        console.error("WebSocket authentication error:", err);
+        ws.close();
+        return;
+      }
+    }
+    
+    // Handle incoming messages from clients
+    ws.on("message", async (data) => {
+      try {
+        const message = JSON.parse(data);
+        
+        if (message.type === 'auth' && message.token) {
+          // Authenticate user
+          try {
+            const decoded = jwt.verify(message.token, process.env.JWT_SECRET);
+            ws.userId = decoded.id;
+            clients.set(ws.userId, ws);
+            console.log(`User ${decoded.id} authenticated`);
+          } catch (err) {
+            console.error("WebSocket authentication error:", err);
+            ws.close();
+          }
+        } else if (message.type === 'message' && ws.userId) {
+          // Handle chat message
+          const { content, recipientId } = message.data;
+          
+          // Add sender info
+          message.data.senderId = ws.userId;
+          message.data.timestamp = new Date().toISOString();
+          
+          // Find recipient WebSocket
+          const recipientWs = clients.get(recipientId);
+          
+          // Send to recipient if online
+          if (recipientWs && recipientWs.readyState === recipientWs.OPEN) {
+            recipientWs.send(JSON.stringify(message));
+          }
+          
+          // Also send back to sender for confirmation
+          if (ws.readyState === ws.OPEN) {
+            ws.send(JSON.stringify(message));
+          }
+          
+          console.log(`Message from ${ws.userId} to ${recipientId}: ${content}`);
+        }
+      } catch (err) {
+        console.error("Error handling WebSocket message:", err);
+      }
+    });
+
     ws.on("close", () => {
       console.log("Client disconnected");
+      // Remove client from map
+      if (ws.userId) {
+        clients.delete(ws.userId);
+      }
+    });
+    
+    ws.on("error", (error) => {
+      console.error("WebSocket error:", error);
+      if (ws.userId) {
+        clients.delete(ws.userId);
+      }
     });
   });
 };

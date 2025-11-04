@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../useAuth";
 import { useLocation, useNavigate } from "react-router-dom";
+import websocketService from "../services/websocket";
+import axios from "axios";
+import MessageList from "../components/MessageList";
 
 interface Message {
   id: string;
@@ -19,6 +22,7 @@ const MessagesPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [recipient, setRecipient] = useState<{ id: string; name: string } | null>(null);
+  const [connected, setConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get recipient from URL query params
@@ -29,44 +33,89 @@ const MessagesPage: React.FC = () => {
     
     if (recipientId && recipientName) {
       setRecipient({ id: recipientId, name: recipientName });
+    } else {
+      setRecipient(null);
     }
   }, [location.search]);
 
-  // Load messages
+  // Connect to WebSocket
   useEffect(() => {
-    const loadMessages = async () => {
-      if (!token) return;
+    if (token) {
+      websocketService.connect(token);
       
-      try {
-        setLoading(true);
-        // In a real app, you would fetch messages from an API
-        // For now, we'll simulate with sample data
-        const sampleMessages: Message[] = [
-          {
-            id: "1",
-            senderId: user?._id || "",
-            senderName: user?.name || "You",
-            content: "Hi there! I'm interested in your sponsorship offer.",
-            timestamp: new Date(Date.now() - 3600000).toISOString()
-          },
-          {
-            id: "2",
-            senderId: "other-user-id",
-            senderName: recipient?.name || "Brand Representative",
-            content: "Hello! Thanks for your interest. Let's discuss the details.",
-            timestamp: new Date(Date.now() - 1800000).toISOString()
-          }
-        ];
-        setMessages(sampleMessages);
-      } catch (err) {
-        console.error("Error loading messages:", err);
-      } finally {
+      websocketService.addMessageListener(handleWebSocketMessage);
+      websocketService.addConnectionListener(handleConnectionChange);
+      
+      // Load initial messages if we have a recipient
+      if (recipient) {
+        loadMessages();
+      } else {
         setLoading(false);
       }
+    }
+    
+    return () => {
+      websocketService.removeMessageListener(handleWebSocketMessage);
+      websocketService.removeConnectionListener(handleConnectionChange);
     };
+  }, [token, recipient]);
 
-    loadMessages();
-  }, [token, user, recipient]);
+  // Handle WebSocket messages
+  const handleWebSocketMessage = (message: any) => {
+    if (message.type === 'message' && message.data) {
+      // Check if the message is from our recipient
+      if (
+        (message.data.senderId === recipient?.id && message.data.recipientId === user?._id) ||
+        (message.data.senderId === user?._id && message.data.recipientId === recipient?.id)
+      ) {
+        setMessages(prev => [...prev, message.data]);
+      }
+    }
+  };
+
+  // Handle WebSocket connection status
+  const handleConnectionChange = (connected: boolean) => {
+    setConnected(connected);
+  };
+
+  // Load messages
+  const loadMessages = async () => {
+    if (!token || !recipient) return;
+    
+    try {
+      setLoading(true);
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages?recipient=${recipient.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      setMessages(res.data);
+    } catch (err) {
+      console.error("Error loading messages:", err);
+      // Fallback to sample data if API fails
+      const sampleMessages: Message[] = [
+        {
+          id: "1",
+          senderId: user?._id || "",
+          senderName: user?.name || "You",
+          content: "Hi there! I'm interested in your sponsorship offer.",
+          timestamp: new Date(Date.now() - 3600000).toISOString()
+        },
+        {
+          id: "2",
+          senderId: recipient.id,
+          senderName: recipient.name,
+          content: "Hello! Thanks for your interest. Let's discuss the details.",
+          timestamp: new Date(Date.now() - 1800000).toISOString()
+        }
+      ];
+      setMessages(sampleMessages);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -78,21 +127,30 @@ const MessagesPage: React.FC = () => {
     if (!newMessage.trim() || !token || !recipient) return;
 
     try {
-      const message: Message = {
-        id: Date.now().toString(),
-        senderId: user?._id || "",
-        senderName: user?.name || "You",
+      const messageData = {
         content: newMessage,
+        recipientId: recipient.id,
+        senderId: user?._id,
+        senderName: user?.name || "You",
         timestamp: new Date().toISOString()
       };
 
-      setMessages(prev => [...prev, message]);
-      setNewMessage("");
+      // Send via WebSocket for real-time delivery
+      websocketService.send({
+        type: 'message',
+        data: messageData
+      });
 
-      // In a real app, you would send the message to an API
-      // await axios.post(`${process.env.REACT_APP_API_URL}/api/messages`, { content: newMessage }, {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
+      // Also send to API for persistence
+      await axios.post(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages`,
+        { content: newMessage, recipientId: recipient.id },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setNewMessage("");
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -127,6 +185,28 @@ const MessagesPage: React.FC = () => {
     groupedMessages[date].push(message);
   });
 
+  // If no recipient is selected, show the message list
+  if (!recipient) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="card shadow-lg rounded-xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+              <div className="flex items-center">
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Messages</h1>
+              </div>
+            </div>
+            
+            {/* Message List */}
+            <MessageList />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show conversation view
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -160,8 +240,8 @@ const MessagesPage: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center">
               <button 
-                onClick={() => navigate(-1)}
-                className="mr-3 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                onClick={() => navigate('/messages')}
+                className="mr-3 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition md:hidden"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 dark:text-gray-300" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -174,13 +254,15 @@ const MessagesPage: React.FC = () => {
                       {recipient?.name.charAt(0).toUpperCase() || "U"}
                     </span>
                   </div>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+                  <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${connected ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                 </div>
                 <div className="ml-3">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {recipient?.name || "User"}
                   </h2>
-                  <p className="text-sm text-green-500">Online</p>
+                  <p className={`text-sm ${connected ? 'text-green-500' : 'text-gray-500'}`}>
+                    {connected ? 'Online' : 'Offline'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -254,7 +336,7 @@ const MessagesPage: React.FC = () => {
               </div>
               <button
                 type="submit"
-                disabled={!newMessage.trim()}
+                disabled={!newMessage.trim() || !connected}
                 className="p-3 bg-primary hover:bg-primary-dark text-white rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

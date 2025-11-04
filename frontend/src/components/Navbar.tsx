@@ -46,6 +46,23 @@ const Navbar: React.FC = () => {
     return location.pathname === path;
   };
 
+  // 添加状态来存储未读消息数量
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  // 模拟从API获取未读消息数量
+  useEffect(() => {
+    // 在实际应用中，这将是一个API调用
+    const fetchUnreadMessages = async () => {
+      // 模拟API延迟
+      setTimeout(() => {
+        // 假设我们获取到了3条未读消息
+        setUnreadMessages(3);
+      }, 500);
+    };
+
+    fetchUnreadMessages();
+  }, []);
+
   return (
     <nav className="bg-white dark:bg-background-dark shadow-md dark:shadow-gray-800/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -117,7 +134,7 @@ const Navbar: React.FC = () => {
                   Search
                 </Link>
                 
-                {/* Messages icon */}
+                {/* Messages icon with dynamic unread count */}
                 <Link
                   to="/messages"
                   className="relative p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -136,8 +153,12 @@ const Navbar: React.FC = () => {
                       d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
                     />
                   </svg>
-                  {/* Notification badge - in a real app, this would be dynamic */}
-                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800"></span>
+                  {/* Dynamic unread message badge */}
+                  {unreadMessages > 0 && (
+                    <span className="absolute top-0 right-0 flex items-center justify-center h-4 w-4 rounded-full bg-red-500 text-xs text-white ring-2 ring-white dark:ring-gray-800">
+                      {unreadMessages}
+                    </span>
+                  )}
                 </Link>
 
                 {/* Profile dropdown */}
@@ -330,10 +351,12 @@ const Navbar: React.FC = () => {
                     />
                   </svg>
                   Messages
-                  {/* Notification badge - in a real app, this would be dynamic */}
-                  <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-red-500 text-xs text-white">
-                    3
-                  </span>
+                  {/* Dynamic unread message badge */}
+                  {unreadMessages > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-red-500 text-xs text-white">
+                      {unreadMessages}
+                    </span>
+                  )}
                 </Link>
                 
                 <Link

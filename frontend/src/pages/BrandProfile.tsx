@@ -144,9 +144,11 @@ const BrandProfile: React.FC = () => {
     try {
       const url = profileExists 
         ? `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands/me` 
-        : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands`;
+        : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands/me`;
       
       const method = profileExists ? "PUT" : "POST";
+      
+      console.log('Sending brand profile data:', normalizedData); // Debug log
       
       const res = await fetch(url, {
         method,
@@ -157,12 +159,17 @@ const BrandProfile: React.FC = () => {
         body: JSON.stringify(normalizedData),
       });
 
+      console.log('Response status:', res.status); // Debug log
+      
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.msg || `Failed to save profile: ${res.status} ${res.statusText}`);
+        const errorText = await res.text();
+        console.error('Server error response:', errorText);
+        throw new Error(`Failed to save profile: ${res.status} ${res.statusText}. ${errorText}`);
       }
 
       const profileResponse = await res.json();
+      console.log('Profile response:', profileResponse); // Debug log
+      
       setInitialProfileData(profileResponse);
       reset(profileResponse);
       setLogoPreview(profileResponse.logoUrl || null);

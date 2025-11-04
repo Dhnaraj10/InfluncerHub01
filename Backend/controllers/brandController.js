@@ -1,6 +1,7 @@
 // backend/controllers/brandController.js
 import BrandProfile from "../models/BrandProfile.js";
 import User from "../models/User.js";
+import mongoose from "mongoose";
 
 // Helper function for sending error responses
 const sendError = (res, status, message, error = null) => {
@@ -14,55 +15,55 @@ const sendError = (res, status, message, error = null) => {
 
 // Create or Update brand profile
 export const createOrUpdateProfile = async (req, res) => {
+  const {
+    companyName,
+    industry,
+    description,
+    logoUrl,
+    website,
+    contactEmail,
+    socialLinks,
+    budgetPerPost,
+  } = req.body;
+
+  // Validate required fields
+  if (!companyName) {
+    return sendError(res, 400, 'Company name is required');
+  }
+  
+  if (!industry) {
+    return sendError(res, 400, 'Industry is required');
+  }
+  
+  if (!contactEmail) {
+    return sendError(res, 400, 'Contact email is required');
+  }
+
+  const profileFields = { user: req.user.id };
+
+  // Required fields
+  profileFields.companyName = companyName;
+  profileFields.industry = industry;
+  profileFields.contactEmail = contactEmail;
+
+  // Optional fields
+  if (description !== undefined) profileFields.description = description || "";
+  if (logoUrl !== undefined) profileFields.logoUrl = logoUrl || "";
+  if (website) profileFields.website = website;
+  if (budgetPerPost !== undefined) profileFields.budgetPerPost = budgetPerPost;
+
+  // Merge socialLinks safely
+  const existingProfile = await BrandProfile.findOne({ user: req.user.id });
+  if (socialLinks) {
+    profileFields.socialLinks = {
+      ...(existingProfile?.socialLinks || {}),
+      ...socialLinks
+    };
+  } else if (existingProfile?.socialLinks) {
+    profileFields.socialLinks = existingProfile.socialLinks;
+  }
+
   try {
-    const {
-      companyName,
-      industry,
-      description,
-      logoUrl,
-      website,
-      contactEmail,
-      socialLinks,
-      budgetPerPost,
-    } = req.body;
-
-    // Validate required fields
-    if (!companyName) {
-      return sendError(res, 400, 'Company name is required');
-    }
-    
-    if (!industry) {
-      return sendError(res, 400, 'Industry is required');
-    }
-    
-    if (!contactEmail) {
-      return sendError(res, 400, 'Contact email is required');
-    }
-
-    const profileFields = { user: req.user.id };
-
-    // Required fields
-    profileFields.companyName = companyName;
-    profileFields.industry = industry;
-    profileFields.contactEmail = contactEmail;
-
-    // Optional fields
-    if (description !== undefined) profileFields.description = description || "";
-    if (logoUrl !== undefined) profileFields.logoUrl = logoUrl || "";
-    if (website) profileFields.website = website;
-    if (budgetPerPost !== undefined) profileFields.budgetPerPost = budgetPerPost;
-
-    // Merge socialLinks safely
-    const existingProfile = await BrandProfile.findOne({ user: req.user.id });
-    if (socialLinks) {
-      profileFields.socialLinks = {
-        ...(existingProfile?.socialLinks || {}),
-        ...socialLinks
-      };
-    } else if (existingProfile?.socialLinks) {
-      profileFields.socialLinks = existingProfile.socialLinks;
-    }
-
     let profile = await BrandProfile.findOneAndUpdate(
       { user: req.user.id },
       { $set: profileFields },

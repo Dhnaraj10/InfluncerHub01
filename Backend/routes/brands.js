@@ -14,14 +14,14 @@ router.put("/me", auth, role(["brand"]), createOrUpdateProfile);
 // Get own profile
 router.get("/me", auth, role(["brand"]), getMyProfile);
 
+// Get all brands (latest) - MUST be before :userId route to prevent conflicts
+router.get("/all", getAllBrands);
+
 // Get profile by user ID
 router.get("/:userId", getProfileById);
 
 // Search brands
 router.get("/", searchBrands);
-
-// Get all brands (latest)
-router.get("/all", getAllBrands);
 
 // Delete brand profile
 router.delete("/me", auth, role(["brand"]), deleteProfile);

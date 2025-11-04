@@ -109,7 +109,7 @@ export const getProfileById = async (req, res) => {
 // Get all brands with search, filter, and pagination
 export const searchBrands = async (req, res) => {
   try {
-    const { q, industry, minBudget, maxBudget, page = 1, limit = 10 } = req.query;
+    const { q, industry, minBudget, maxBudget, page = 1, limit = 20 } = req.query;
     
     // Build filter criteria
     const filter = {};
@@ -133,22 +133,6 @@ export const searchBrands = async (req, res) => {
       filter.budgetPerPost = {};
       if (minBudget) filter.budgetPerPost.$gte = Number(minBudget);
       if (maxBudget) filter.budgetPerPost.$lte = Number(maxBudget);
-    }
-    
-    // If no filters are provided, get latest brands
-    if (!q && !industry && !minBudget && !maxBudget) {
-      const docs = await BrandProfile.find()
-        .populate('user', ['name', 'email', 'avatar'])
-        .sort('-createdAt')
-        .limit(10)
-        .lean();
-        
-      return res.json({ 
-        total: docs.length, 
-        page: 1, 
-        limit: 10, 
-        results: docs 
-      });
     }
     
     // Apply filters with pagination
@@ -184,7 +168,7 @@ export const searchBrands = async (req, res) => {
 // Get all brands (latest)
 export const getAllBrands = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 20 } = req.query; // Increased default limit to 20
     
     const docs = await BrandProfile.find()
       .populate('user', ['name', 'email', 'avatar'])
@@ -205,9 +189,7 @@ export const getAllBrands = async (req, res) => {
 export const deleteProfile = async (req, res) => {
   try {
     await BrandProfile.findOneAndRemove({ user: req.user.id });
-    await User.findOneAndRemove({ _id: req.user.id });
-
-    res.json({ msg: "User deleted" });
+    res.json({ msg: "Profile deleted" });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");

@@ -2,6 +2,7 @@
 import React, { useContext } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext, AuthContextType } from "../AuthContext";
+import { FaInstagram, FaYoutube, FaTwitter, FaTiktok } from 'react-icons/fa';
 
 interface InfluencerCardProps {
   id: string;
@@ -11,6 +12,13 @@ interface InfluencerCardProps {
   imageUrl: string;
   categories?: string[];
   handle: string;
+  socialLinks?: {
+    instagram?: string;
+    youtube?: string;
+    twitter?: string;
+    tiktok?: string;
+    other?: string;
+  };
 }
 
 const InfluencerCard: React.FC<InfluencerCardProps> = ({
@@ -20,7 +28,8 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
   engagementRate,
   imageUrl,
   categories = [],
-  handle
+  handle,
+  socialLinks
 }) => {
   const context = useContext(AuthContext);
   
@@ -34,6 +43,15 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
     if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
     if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
     return count.toString();
+  };
+
+  // Normalize URL by adding protocol if missing
+  const normalizeUrl = (url?: string) => {
+    if (!url) return "";
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
   };
 
   return (
@@ -94,6 +112,52 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
                 {category}
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Social Links */}
+        {socialLinks && (
+          <div className="flex gap-2 mt-3">
+            {socialLinks.instagram && (
+              <a 
+                href={normalizeUrl(socialLinks.instagram)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-500 hover:text-pink-500 dark:hover:text-pink-400 transition-colors"
+              >
+                <FaInstagram className="h-5 w-5" />
+              </a>
+            )}
+            {socialLinks.youtube && (
+              <a 
+                href={normalizeUrl(socialLinks.youtube)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+              >
+                <FaYoutube className="h-5 w-5" />
+              </a>
+            )}
+            {socialLinks.twitter && (
+              <a 
+                href={normalizeUrl(socialLinks.twitter)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-500 hover:text-sky-400 dark:hover:text-sky-400 transition-colors"
+              >
+                <FaTwitter className="h-5 w-5" />
+              </a>
+            )}
+            {socialLinks.tiktok && (
+              <a 
+                href={normalizeUrl(socialLinks.tiktok)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              >
+                <FaTiktok className="h-5 w-5" />
+              </a>
+            )}
           </div>
         )}
 

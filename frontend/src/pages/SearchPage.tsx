@@ -147,10 +147,11 @@ const SearchPage: React.FC = () => {
       id: influencer._id,
       name: influencer.user?.name || 'Unknown',
       followers: influencer.followerCount,
-      engagementRate: influencer.engagementRate || 0,
+      engagementRate: influencer.averageEngagementRate || 0,
       imageUrl: influencer.avatarUrl || '',
       categories: influencer.categories?.map(cat => cat.name) || [],
-      handle: influencer.handle || ''
+      handle: influencer.handle || '',
+      socialLinks: influencer.socialLinks || {}
     };
   };
 

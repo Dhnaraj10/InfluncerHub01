@@ -152,6 +152,7 @@ export const searchInfluencers = async (req, res) => {
     const docs = await InfluencerProfile.find(filter)
       .populate("user", ["name", "avatar"])
       .populate("categories", "name")
+      .select("socialLinks") // Ensure socialLinks is included
       .sort(sort)
       .skip(skip)
       .limit(Number(limit));
@@ -176,7 +177,8 @@ export const getAllInfluencers = async (req, res) => {
       .populate("categories", "name")
       .sort(sort)
       .skip(skip)
-      .limit(Number(limit));
+      .limit(Number(limit))
+      .select("socialLinks"); // 添加这一行来填充 socialLinks 字段
 
     const total = await InfluencerProfile.countDocuments();
 

@@ -53,15 +53,18 @@ const CreateSponsorship: React.FC = () => {
 
     try {
       setLoading(true);
+      // Use the correct endpoint for searching influencers
       const res = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/search?q=${encodeURIComponent(query)}`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers?q=${encodeURIComponent(query)}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
       if (!res.ok) throw new Error("Failed to search influencers");
       const data = await res.json();
-      setFilteredInfluencers(data.results || []);
+      // Handle both possible response formats
+      const results = data.results || data;
+      setFilteredInfluencers(Array.isArray(results) ? results : []);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to search influencers");
@@ -253,7 +256,7 @@ const CreateSponsorship: React.FC = () => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search influencers by name or handle..."
+                    placeholder="Search by name, handle, category, or tag..."
                     className="input w-full pl-10"
                   />
                 </div>
@@ -320,6 +323,11 @@ const CreateSponsorship: React.FC = () => {
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
                                   @{influencer.handle}
                                 </div>
+                                {influencer.categories && influencer.categories.length > 0 && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {influencer.categories.map((cat: any) => cat.name).join(', ')}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </li>

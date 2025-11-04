@@ -82,7 +82,10 @@ const InfluencerPage: React.FC = () => {
       navigate("/sponsorships");
     } catch (error: any) {
       console.error("Error creating sponsorship:", error);
-      toast.error(error.response?.data?.message || "Failed to send sponsorship offer");
+      const errorMessage = error.response?.data?.message || "Failed to send sponsorship offer";
+      toast.error(errorMessage);
+      // Re-throw the error so the modal can handle it appropriately
+      throw error;
     }
   };
 
@@ -129,6 +132,14 @@ const InfluencerPage: React.FC = () => {
     return count.toString();
   };
 
+  // Get influencer name
+  const getInfluencerName = () => {
+    if (influencer.user && typeof influencer.user === 'object') {
+      return influencer.user.name;
+    }
+    return influencer.handle;
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Profile Header */}
@@ -152,7 +163,7 @@ const InfluencerPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {influencer.handle}
+                  {getInfluencerName()}
                 </h1>
                 <p className="text-xl text-gray-600 dark:text-gray-300 mt-1">@{influencer.handle}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -225,19 +236,19 @@ const InfluencerPage: React.FC = () => {
                   <div className="flex gap-6">
                     {influencer.pricing.post && (
                       <div>
-                        <p className="font-bold text-gray-900 dark:text-white">₹{influencer.pricing.post}</p>
+                        <p className="font-bold text-gray-900 dark:text-white">₹{influencer.pricing.post.toLocaleString()}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">Post</p>
                       </div>
                     )}
                     {influencer.pricing.reel && (
                       <div>
-                        <p className="font-bold text-gray-900 dark:text-white">₹{influencer.pricing.reel}</p>
+                        <p className="font-bold text-gray-900 dark:text-white">₹{influencer.pricing.reel.toLocaleString()}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">Reel</p>
                       </div>
                     )}
                     {influencer.pricing.story && (
                       <div>
-                        <p className="font-bold text-gray-900 dark:text-white">₹{influencer.pricing.story}</p>
+                        <p className="font-bold text-gray-900 dark:text-white">₹{influencer.pricing.story.toLocaleString()}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">Story</p>
                       </div>
                     )}
@@ -383,6 +394,8 @@ const InfluencerPage: React.FC = () => {
             }}
             userRole="brand"
             onCreateSponsorship={handleCreateSponsorship}
+            influencerName={getInfluencerName()}
+            influencerHandle={influencer.handle}
           />
         )}
       </div>

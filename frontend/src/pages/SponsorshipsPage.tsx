@@ -212,7 +212,7 @@ const SponsorshipDashboard: React.FC = () => {
                 {filteredSponsorships.map((sponsorship) => (
                   <tr 
                     key={sponsorship._id} 
-                    className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-150 ease-in-out"
+                    className="hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors duration-150 ease-in-out"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">{sponsorship.title}</div>

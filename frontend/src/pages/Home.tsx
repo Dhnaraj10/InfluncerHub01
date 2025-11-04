@@ -97,19 +97,21 @@ const Home: React.FC = () => {
         </section>
 
         {/* CTA Section */}
-        <section className="bg-gradient-to-r from-primary to-secondary py-16">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-6">
-              Ready to Transform Your Influencer Marketing?
-            </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
-              Join thousands of brands and influencers already growing with InfluencerHub.
-            </p>
-            <Link to="/signup" className="inline-flex items-center justify-center px-8 py-3 border-2 border-white text-lg font-medium rounded-lg text-white bg-transparent hover:bg-white hover:text-secondary transition-all duration-200 hover-glow">
-              Start Free Trial
-            </Link>
-          </div>
-        </section>
+        {!isAuthenticated && (
+          <section className="bg-gradient-to-r from-primary to-secondary py-16">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-6">
+                Ready to Transform Your Influencer Marketing?
+              </h2>
+              <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
+                Join thousands of brands and influencers already growing with InfluencerHub.
+              </p>
+              <Link to="/signup" className="inline-flex items-center justify-center px-8 py-3 border-2 border-white text-lg font-medium rounded-lg text-white bg-transparent hover:bg-white hover:text-secondary transition-all duration-200 hover-glow">
+                Start Free Trial
+              </Link>
+            </div>
+          </section>
+        )}
       </main>
       
       

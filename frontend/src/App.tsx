@@ -19,6 +19,14 @@ import MessagesPage from "./pages/MessagesPage";
 import NotFoundPage from "./pages/NotFound";
 import SettingsPage from "./pages/Settings";
 import SponsorshipDetailPage from "./pages/SponsorshipDetailPage";
+import AboutPage from "./pages/About";
+import ContactPage from "./pages/Contact";
+import BlogPage from "./pages/Blog";
+import CareersPage from "./pages/Careers";
+import PricingPage from "./pages/Pricing";
+import PrivacyPage from "./pages/Privacy";
+import TermsPage from "./pages/Terms";
+import CookiesPage from "./pages/Cookies";
 
 function App() {
   return (
@@ -40,6 +48,14 @@ function App() {
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/careers" element={<CareersPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/cookies" element={<CookiesPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </MainLayout>

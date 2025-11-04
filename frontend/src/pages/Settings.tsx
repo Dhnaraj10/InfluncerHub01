@@ -6,7 +6,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import toast from 'react-hot-toast';
 
 const Settings: React.FC = () => {
-  const { logout, token } = useAuth();
+  const { logout, token, user } = useAuth();
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -55,31 +55,35 @@ const Settings: React.FC = () => {
           <div className="border-b border-gray-200 dark:border-gray-700 pb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profile Settings</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">Edit Profile</h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                  Update your profile information and public visibility settings.
-                </p>
-                <button
-                  onClick={() => navigate('/profile')}
-                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm"
-                >
-                  Edit Profile
-                </button>
-              </div>
+              {user?.role === "influencer" && (
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">Edit Profile</h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                    Update your profile information and public visibility settings.
+                  </p>
+                  <button
+                    onClick={() => navigate('/profile')}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm"
+                  >
+                    Edit Profile
+                  </button>
+                </div>
+              )}
               
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">Brand Profile</h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                  Manage your brand information and sponsorship preferences.
-                </p>
-                <button
-                  onClick={() => navigate('/brand-profile')}
-                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm"
-                >
-                  Edit Brand Profile
-                </button>
-              </div>
+              {user?.role === "brand" && (
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">Brand Profile</h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                    Manage your brand information and sponsorship preferences.
+                  </p>
+                  <button
+                    onClick={() => navigate('/brand-profile')}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm"
+                  >
+                    Edit Brand Profile
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           

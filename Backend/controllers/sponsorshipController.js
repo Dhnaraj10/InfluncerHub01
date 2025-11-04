@@ -1,8 +1,9 @@
 // Backend/controllers/sponsorshipController.js
-import Sponsorship from "../models/Sponsorship.js";
-import InfluencerProfile from "../models/InfluencerProfile.js";
 import BrandProfile from "../models/BrandProfile.js";
+import InfluencerProfile from "../models/InfluencerProfile.js";
+import Sponsorship from "../models/Sponsorship.js";
 import User from "../models/User.js";
+
 import { publishSponsorshipUpdate } from "../utils/websocketServer.js";
 
 // @desc    Create a sponsorship (Brand side)

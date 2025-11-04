@@ -35,13 +35,13 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  console.log("Login request received:", req.body); // DEBUG
-  const { email, password } = req.body;
+  // Remove logging of sensitive data
+  const { email } = req.body;
   try {
     const user = await UserModel.findOne({ email });
     if (!user) return res.status(400).json({ msg: "Invalid credentials" });
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(req.body.password, user.password);
     if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
 
     const payload = { id: user.id };

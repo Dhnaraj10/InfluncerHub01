@@ -17,6 +17,7 @@ interface UpdateProfileFormInputs {
     youtube?: string;
     tiktok?: string;
     twitter?: string;
+    other?: string; // Add the missing 'other' field
   };
   portfolio: { value: string }[]; // Added portfolio
   categories: { _id: string; name: string }[]; // Added categories
@@ -62,6 +63,7 @@ const UpdateProfileForm: React.FC = () => {
             youtube: data.socialLinks?.youtube || "",
             tiktok: data.socialLinks?.tiktok || "",
             twitter: data.socialLinks?.twitter || "",
+            other: data.socialLinks?.other || "", // Add the missing 'other' field
           },
           portfolio: (data.portfolio || []).map(item => ({ value: item })),
           categories: data.categories || [],
@@ -98,6 +100,7 @@ const UpdateProfileForm: React.FC = () => {
             youtube: formData.socialLinks.youtube,
             tiktok: formData.socialLinks.tiktok,
             twitter: formData.socialLinks.twitter,
+            other: formData.socialLinks.other, // Add the missing 'other' field
           },
           portfolio: formData.portfolio.map(item => item.value),
           categories: formData.categories.map(cat => cat.name), // Send only category names
@@ -251,6 +254,18 @@ const UpdateProfileForm: React.FC = () => {
           <input
             type="text"
             {...register("socialLinks.twitter")}
+            className="mt-1 w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
+              bg-gray-50/70 dark:bg-gray-700/70 
+              focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Other Social URL
+          </label>
+          <input
+            type="text"
+            {...register("socialLinks.other")}
             className="mt-1 w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
               bg-gray-50/70 dark:bg-gray-700/70 
               focus:ring-2 focus:ring-primary focus:border-primary outline-none"

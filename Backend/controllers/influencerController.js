@@ -18,6 +18,7 @@ export const createOrUpdateProfile = async (req, res) => {
     youtube,
     tiktok,
     twitter,
+    other, // Add the missing 'other' social link field
     averageEngagementRate,
   } = req.body;
 
@@ -44,6 +45,7 @@ export const createOrUpdateProfile = async (req, res) => {
     youtube: youtube !== undefined ? youtube : existingLinks.youtube || "",
     tiktok: tiktok !== undefined ? tiktok : existingLinks.tiktok || "",
     twitter: twitter !== undefined ? twitter : existingLinks.twitter || "",
+    other: other !== undefined ? other : existingLinks.other || "", // Add the missing 'other' field handling
   };
 
   if (categories) {

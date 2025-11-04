@@ -92,10 +92,10 @@ export const getSponsorshipById = async (req, res) => {
       })
       .populate({
         path: "influencer",
-        select: "handle user",
+        select: "_id handle user",
         populate: {
           path: "user",
-          select: "name"
+          select: "name email"
         }
       });
 
@@ -113,7 +113,7 @@ export const getSponsorshipById = async (req, res) => {
 
     // Ensure proper influencer name
     if (sponsorship.influencer && sponsorship.influencer.user) {
-      sponsorship.influencer.name = sponsorship.influencer.user.name;
+      sponsorship.influencer.name = sponsorship.influencer.user.name || "Unknown Influencer";
     }
 
     // Check if user has permission to view this sponsorship
@@ -121,12 +121,12 @@ export const getSponsorshipById = async (req, res) => {
     
     if (req.user.role === "brand") {
       const brandProfile = await BrandProfile.findOne({ user: req.user._id });
-      if (brandProfile && sponsorship.brand._id.toString() === brandProfile._id.toString()) {
+      if (brandProfile && sponsorship.brand && sponsorship.brand._id.toString() === brandProfile._id.toString()) {
         hasPermission = true;
       }
     } else if (req.user.role === "influencer") {
       const influencerProfile = await InfluencerProfile.findOne({ user: req.user._id });
-      if (influencerProfile && sponsorship.influencer._id.toString() === influencerProfile._id.toString()) {
+      if (influencerProfile && sponsorship.influencer && sponsorship.influencer._id.toString() === influencerProfile._id.toString()) {
         hasPermission = true;
       }
     }

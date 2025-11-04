@@ -36,7 +36,13 @@ const SponsorshipDetailPage: React.FC = () => {
         setSponsorship(res.data);
       } catch (err: any) {
         console.error("Error fetching sponsorship:", err);
-        toast.error(err.message || "Failed to load sponsorship details");
+        if (err.response && err.response.status === 403) {
+          toast.error("You don't have permission to view this sponsorship");
+        } else if (err.response && err.response.status === 404) {
+          toast.error("Sponsorship not found");
+        } else {
+          toast.error(err.message || "Failed to load sponsorship details");
+        }
         navigate("/sponsorships");
       } finally {
         setLoading(false);

@@ -11,8 +11,10 @@ interface Message {
   id: string;
   senderId: string;
   senderName: string;
+  recipientId: string;
   content: string;
   timestamp: string;
+  status?: string;
 }
 
 const MessagesPage: React.FC = () => {
@@ -66,7 +68,14 @@ const MessagesPage: React.FC = () => {
           (message.data.senderId === recipient?.id && message.data.recipientId === user?._id) ||
           (message.data.senderId === user?._id && message.data.recipientId === recipient?.id)
         ) {
-          setMessages(prev => [...prev, message.data]);
+          setMessages(prev => {
+            // Check if message already exists to avoid duplicates
+            const messageExists = prev.some(msg => msg.id === message.data.id);
+            if (!messageExists) {
+              return [...prev, message.data];
+            }
+            return prev;
+          });
         }
       } else if (message.type === 'messageRequestConfirmation') {
         // Show confirmation that request was sent
@@ -152,12 +161,23 @@ const MessagesPage: React.FC = () => {
         return;
       }
 
+      // Add message to local state if not already there (in case WebSocket is slow)
+      setMessages(prev => {
+        // Check if message already exists to avoid duplicates
+        const messageExists = prev.some(msg => msg.id === res.data.id);
+        if (!messageExists) {
+          return [...prev, res.data];
+        }
+        return prev;
+      });
+
       setNewMessage("");
     } catch (err: any) {
       if (err.response && err.response.status === 400) {
         alert("You've already sent a message request to this user. Please wait for them to accept.");
       } else {
         console.error("Error sending message:", err);
+        alert("Failed to send message. Please try again.");
       }
     }
   };
@@ -199,62 +219,38 @@ const MessagesPage: React.FC = () => {
           <div className="card shadow-lg rounded-xl overflow-hidden">
             {/* Header */}
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Messages</h1>
-              </div>
-              
-              {/* Tabs */}
-              <div className="mt-4 flex border-b border-gray-200 dark:border-gray-700">
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Messages</h1>
+            </div>
+            
+            {/* Tabs */}
+            <div className="border-b border-gray-200 dark:border-gray-700">
+              <nav className="flex -mb-px">
                 <button
-                  onClick={() => setActiveTab("messages")}
-                  className={`py-2 px-4 text-sm font-medium border-b-2 ${
+                  className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
                     activeTab === "messages"
-                      ? "border-primary text-primary dark:text-primary-light"
+                      ? "border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
                   }`}
+                  onClick={() => setActiveTab("messages")}
                 >
                   Messages
                 </button>
                 <button
-                  onClick={() => setActiveTab("requests")}
-                  className={`py-2 px-4 text-sm font-medium border-b-2 ${
+                  className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
                     activeTab === "requests"
-                      ? "border-primary text-primary dark:text-primary-light"
+                      ? "border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
                   }`}
+                  onClick={() => setActiveTab("requests")}
                 >
                   Requests
                 </button>
-              </div>
+              </nav>
             </div>
             
-            {/* Content */}
-            {activeTab === "messages" ? <MessageList /> : <MessageRequests />}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show conversation view
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="card p-6">
-            <div className="animate-pulse">
-              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center space-x-4">
-                    <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-10 w-10"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {/* Tab Content */}
+            <div className="bg-white dark:bg-gray-800 min-h-[500px]">
+              {activeTab === "messages" ? <MessageList /> : <MessageRequests />}
             </div>
           </div>
         </div>
@@ -262,112 +258,95 @@ const MessagesPage: React.FC = () => {
     );
   }
 
+  // If recipient is selected, show the conversation
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="card shadow-lg rounded-xl overflow-hidden">
-          {/* Chat header */}
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center">
-              <button 
-                onClick={() => navigate('/messages')}
-                className="mr-3 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition md:hidden"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 dark:text-gray-300" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <div className="flex items-center">
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-medium">
-                      {recipient?.name.charAt(0).toUpperCase() || "U"}
-                    </span>
-                  </div>
-                </div>
-                <div className="ml-3">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {recipient?.name || "User"}
-                  </h2>
-                </div>
-              </div>
-            </div>
+          {/* Header */}
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center">
+            <button
+              onClick={() => navigate("/messages")}
+              className="mr-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-white">{recipient.name}</h1>
           </div>
-
-          {/* Messages container */}
-          <div className="bg-gray-100 dark:bg-gray-800/50 h-[calc(100vh-220px)] overflow-y-auto p-4">
-            {Object.entries(groupedMessages).map(([date, dateMessages]) => (
-              <div key={date} className="mb-6">
-                <div className="flex justify-center">
-                  <span className="text-xs font-medium px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
-                    {date}
-                  </span>
-                </div>
-                
-                {dateMessages.map((message) => (
-                  <div 
-                    key={message.id} 
-                    className={`flex mt-4 ${message.senderId === user?._id ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {message.senderId !== user?._id && (
-                      <div className="flex-shrink-0 mr-3">
-                        <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
-                          <span className="text-secondary text-xs font-medium">
-                            {message.senderName.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className={`max-w-xs md:max-w-md lg:max-w-lg ${message.senderId === user?._id ? 'rounded-l-xl rounded-tr-xl bg-primary text-white' : 'rounded-r-xl rounded-tl-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white'} px-4 py-2`}>
-                      {message.senderId !== user?._id && (
-                        <div className="font-medium text-sm mb-1">{message.senderName}</div>
-                      )}
-                      <div className="text-sm">{message.content}</div>
-                      <div className={`text-xs mt-1 ${message.senderId === user?._id ? 'text-primary-light' : 'text-gray-500 dark:text-gray-400'} text-right`}>
-                        {formatTime(message.timestamp)}
-                      </div>
+          
+          {/* Messages */}
+          <div className="bg-white dark:bg-gray-800 flex-1 overflow-y-auto max-h-[60vh] p-4">
+            {loading ? (
+              <div className="flex justify-center items-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                <p className="text-lg">No messages yet</p>
+                <p className="mt-2 text-center">Send a message to start the conversation</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(groupedMessages).map(([date, dateMessages]) => (
+                  <div key={date}>
+                    <div className="text-center my-4">
+                      <span className="inline-block bg-gray-200 dark:bg-gray-700 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {date}
+                      </span>
                     </div>
-                    
-                    {message.senderId === user?._id && (
-                      <div className="flex-shrink-0 ml-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-primary text-xs font-medium">
-                            {message.senderName.charAt(0).toUpperCase()}
-                          </span>
+                    {dateMessages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex mb-4 ${
+                          message.senderId === user?._id ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <div
+                          className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-4 py-2 ${
+                            message.senderId === user?._id
+                              ? "bg-blue-500 text-white rounded-br-none"
+                              : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-bl-none"
+                          }`}
+                        >
+                          <p>{message.content}</p>
+                          <div
+                            className={`text-xs mt-1 ${
+                              message.senderId === user?._id ? "text-blue-100" : "text-gray-500 dark:text-gray-400"
+                            }`}
+                          >
+                            {formatTime(message.timestamp)}
+                          </div>
                         </div>
                       </div>
-                    )}
+                    ))}
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
-            ))}
-            
-            <div ref={messagesEndRef} />
+            )}
           </div>
-
-          {/* Message input */}
+          
+          {/* Message Input */}
           <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-            <form onSubmit={handleSendMessage} className="flex items-center">
-              <div className="flex-1 mr-3">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900 dark:text-white"
-                  />
-                </div>
-              </div>
+            <form onSubmit={handleSendMessage} className="flex">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1 border border-gray-300 dark:border-gray-600 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              />
               <button
                 type="submit"
                 disabled={!newMessage.trim()}
-                className="p-3 bg-primary hover:bg-primary-dark text-white rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                </svg>
+                Send
               </button>
             </form>
           </div>

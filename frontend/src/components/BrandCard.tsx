@@ -20,7 +20,8 @@ const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
   const { user } = context;
   
   // Use the user ID from the brand profile for the link
-  const brandProfileId = brand.user?._id || brand._id;
+  // The brand.user is the user ID (string) in search results, not an object
+  const brandProfileId = typeof brand.user === 'string' ? brand.user : brand.user?._id;
 
   // Format price with currency
   const formatPrice = (value?: number) => {

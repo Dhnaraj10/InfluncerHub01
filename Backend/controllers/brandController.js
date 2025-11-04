@@ -50,24 +50,24 @@ export const createOrUpdateProfile = async (req, res) => {
   if (website) profileFields.website = website;
   if (budgetPerPost !== undefined) profileFields.budgetPerPost = budgetPerPost;
 
-  // Merge socialLinks safely
-  const existingProfile = await BrandProfile.findOne({ user: req.user.id }).exec();
-  profileFields.socialLinks = {
-    ...(existingProfile?.socialLinks || {}),
-    ...socialLinks
-  };
+  // Handle socialLinks
+  if (socialLinks) {
+    profileFields.socialLinks = {};
+    if (socialLinks.instagram) profileFields.socialLinks.instagram = socialLinks.instagram;
+    if (socialLinks.twitter) profileFields.socialLinks.twitter = socialLinks.twitter;
+    if (socialLinks.linkedin) profileFields.socialLinks.linkedin = socialLinks.linkedin;
+  }
 
   try {
     let profile = await BrandProfile.findOneAndUpdate(
       { user: req.user.id },
       { $set: profileFields },
       { new: true, upsert: true, setDefaultsOnInsert: true }
-    ).populate("user", ["name", "avatar", "email"]);
+    ).populate("user", ["name", "email", "phone", "avatar"]);
 
     res.json({ success: true, profile });
-    
   } catch (err) {
-    if (err.name === 'ValidationError') {
+    if (err.name === "ValidationError") {
       return sendError(res, 400, 'Validation error', err);
     }
     return sendError(res, 500, 'Server error', err);
@@ -78,24 +78,24 @@ export const createOrUpdateProfile = async (req, res) => {
 export const getMyProfile = async (req, res) => {
   try {
     const profile = await BrandProfile.findOne({ user: req.user.id })
-      .populate("user", ["name", "avatar", "email", "phone"])
-      .exec();
+      .populate("user", ["name", "email", "phone", "avatar"]);
 
     if (!profile) {
-      return sendError(res, 404, 'Brand profile not found');
-    }
-
-    // User exists if we got this far, no need to check status
-    const user = await User.findById(req.user.id).select(['_id']); // Only select the _id field we need
-    if (!user) {
-      return sendError(res, 404, 'User not found');
+      return sendError(res, 400, 'There is no profile for this user');
     }
 
     res.json({ success: true, profile });
   } catch (err) {
-    if (err.name === 'CastError') {
-      return sendError(res, 400, 'Invalid user ID', err);
-    }
+    return sendError(res, 500, 'Server error', err);
+  }
+};
+
+// Delete brand profile
+export const deleteProfile = async (req, res) => {
+  try {
+    await BrandProfile.findOneAndRemove({ user: req.user.id });
+    res.json({ success: true, msg: "Profile deleted" });
+  } catch (err) {
     return sendError(res, 500, 'Server error', err);
   }
 };
@@ -166,7 +166,7 @@ export const searchBrands = async (req, res) => {
     
     // Apply filters with pagination
     const docs = await BrandProfile.find(filter)
-      .populate('user', ['name', 'email', 'avatar'])
+      .populate('user', ['_id', 'name', 'email', 'avatar'])
       .sort('-createdAt')
       .skip((pageNumber - 1) * pageSize)
       .limit(pageSize)
@@ -198,10 +198,11 @@ export const getAllBrands = async (req, res) => {
     const pageSize = Math.min(50, Number(limit));
     
     const docs = await BrandProfile.find()
-      .populate('user', ['name', 'email', 'avatar'])
+      .populate('user', ['_id', 'name', 'email', 'avatar'])
       .sort('-createdAt')
       .skip((pageNumber - 1) * pageSize)
-      .limit(pageSize);
+      .limit(pageSize)
+      .lean();
 
     const total = await BrandProfile.countDocuments();
 
@@ -213,21 +214,15 @@ export const getAllBrands = async (req, res) => {
       results: docs 
     });
   } catch (err) {
-    return sendError(res, 500, 'Error fetching all brands', err);
+    return sendError(res, 500, 'Server error', err);
   }
 };
 
-// Delete brand profile
-export const deleteProfile = async (req, res) => {
-  try {
-    const profile = await BrandProfile.findOneAndRemove({ user: req.user.id });
-    
-    if (!profile) {
-      return sendError(res, 404, 'Brand profile not found');
-    }
-    
-    res.json({ success: true, msg: "Profile deleted" });
-  } catch (err) {
-    return sendError(res, 500, 'Server error', err);
-  }
+export default {
+  createOrUpdateProfile,
+  getMyProfile,
+  deleteProfile,
+  getProfileById,
+  searchBrands,
+  getAllBrands
 };

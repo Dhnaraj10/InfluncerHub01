@@ -27,16 +27,14 @@ export const createOrUpdateProfile = async (req, res) => {
   } = req.body;
 
   // Validate required fields
-  if (!companyName) {
-    return sendError(res, 400, 'Company name is required');
+  if (!companyName || !industry || !contactEmail) {
+    return sendError(res, 400, 'Company name, industry and contact email are required');
   }
-  
-  if (!industry) {
-    return sendError(res, 400, 'Industry is required');
-  }
-  
-  if (!contactEmail) {
-    return sendError(res, 400, 'Contact email is required');
+
+  // Ensure user exists
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return sendError(res, 404, 'User not found');
   }
 
   const profileFields = { user: req.user.id };
@@ -53,22 +51,18 @@ export const createOrUpdateProfile = async (req, res) => {
   if (budgetPerPost !== undefined) profileFields.budgetPerPost = budgetPerPost;
 
   // Merge socialLinks safely
-  const existingProfile = await BrandProfile.findOne({ user: req.user.id });
-  if (socialLinks) {
-    profileFields.socialLinks = {
-      ...(existingProfile?.socialLinks || {}),
-      ...socialLinks
-    };
-  } else if (existingProfile?.socialLinks) {
-    profileFields.socialLinks = existingProfile.socialLinks;
-  }
+  const existingProfile = await BrandProfile.findOne({ user: req.user.id }).exec();
+  profileFields.socialLinks = {
+    ...(existingProfile?.socialLinks || {}),
+    ...socialLinks
+  };
 
   try {
     let profile = await BrandProfile.findOneAndUpdate(
       { user: req.user.id },
       { $set: profileFields },
       { new: true, upsert: true, setDefaultsOnInsert: true }
-    ).populate("user", ["name", "avatar"]);
+    ).populate("user", ["name", "avatar", "email"]);
 
     res.json({ success: true, profile });
     
@@ -83,17 +77,25 @@ export const createOrUpdateProfile = async (req, res) => {
 // Get current user's brand profile
 export const getMyProfile = async (req, res) => {
   try {
-    const profile = await BrandProfile.findOne({ user: req.user.id }).populate(
-      "user",
-      ["name", "avatar"]
-    );
+    const profile = await BrandProfile.findOne({ user: req.user.id })
+      .populate("user", ["name", "avatar", "email", "phone"])
+      .exec();
 
     if (!profile) {
       return sendError(res, 404, 'Brand profile not found');
     }
 
+    // Ensure user is still valid
+    const user = await User.findById(req.user.id).select(['_id', 'status']);
+    if (!user || user.status !== 'active') {
+      return sendError(res, 404, 'User not found or inactive');
+    }
+
     res.json({ success: true, profile });
   } catch (err) {
+    if (err.name === 'CastError') {
+      return sendError(res, 400, 'Invalid user ID', err);
+    }
     return sendError(res, 500, 'Server error', err);
   }
 };
@@ -103,11 +105,18 @@ export const getProfileById = async (req, res) => {
   try {
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
-      return sendError(res, 400, 'Invalid profile ID');
+      return sendError(res, 400, 'Invalid user ID');
+    }
+
+    // Check if user exists first
+    const user = await User.findById(req.params.userId).select(['_id', 'status']);
+    if (!user || user.status !== 'active') {
+      return sendError(res, 404, 'User not found or inactive');
     }
 
     const profile = await BrandProfile.findOne({ user: req.params.userId })
-      .populate("user", ["name", "email"]);
+      .populate("user", ["name", "email", "phone", "avatar"])
+      .exec();
     
     if (!profile) {
       return sendError(res, 404, 'Brand profile not found');
@@ -115,6 +124,9 @@ export const getProfileById = async (req, res) => {
     
     res.json({ success: true, profile });
   } catch (err) {
+    if (err.name === 'CastError') {
+      return sendError(res, 400, 'Invalid user ID format', err);
+    }
     return sendError(res, 500, 'Server error', err);
   }
 };

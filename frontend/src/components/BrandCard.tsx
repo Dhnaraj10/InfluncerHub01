@@ -1,34 +1,46 @@
 // frontend/src/components/BrandCard.tsx
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { BrandProfile } from '../types/types';
+import React, { useContext } from "react";
+import { Link } from "react-router-dom";
+import { AuthContext, AuthContextType } from "../AuthContext";
 import { FaInstagram, FaTwitter, FaLinkedin, FaLink } from 'react-icons/fa';
+import { BrandProfile } from "../types/types";
 
 interface BrandCardProps {
   brand: BrandProfile;
 }
 
 const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
-  // Normalize URL by adding protocol if missing
-  const normalizeUrl = (url?: string) => {
-    if (!url) return "";
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    return `https://${url}`;
-  };
+  const context = useContext(AuthContext);
+  
+  // Check if context is available
+  if (!context) {
+    throw new Error('BrandCard must be used within an AuthProvider');
+  }
+  
+  const { user } = context;
+  
+  // Use the user ID from the brand profile for the link
+  const brandProfileId = brand.user?._id || brand._id;
 
   // Format price with currency
   const formatPrice = (value?: number) => {
-    if (value === undefined || value === null) return 'N/A';
+    if (value === undefined || value === null) return "N/A";
     // show integer or two decimals if fractional
     const v = Number(value);
     const formatted = Number.isInteger(v) ? v.toString() : v.toFixed(2);
     return `₹${formatted}`;
   };
 
-  // Get brand profile ID from user object
-  const brandProfileId = brand.user?._id;
+  // Normalize URL by adding protocol if missing
+  const normalizeUrl = (url?: string) => {
+    if (!url) return "";
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Add https:// protocol if missing
+    return `https://${url}`;
+  };
 
   return (
     <div className="card hover:shadow-xl transition-shadow duration-300">
@@ -53,37 +65,34 @@ const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
           )}
           
           <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+            <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">
               {brand.companyName}
             </h3>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               {brand.industry}
             </p>
-            <div className="mt-1 bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 inline-block">
-              <span className="text-xs text-gray-500 dark:text-gray-400">Budget/post</span>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {brand.budgetPerPost ? formatPrice(brand.budgetPerPost) : 'N/A'}
-              </p>
+            <div className="mt-1 text-sm font-medium text-primary dark:text-primary-light">
+              {formatPrice(brand.budgetPerPost)}/post
             </div>
           </div>
         </div>
-        
-        <p className="mt-4 text-gray-600 dark:text-gray-300 line-clamp-2">
-          {brand.description || "No description provided"}
-        </p>
-        
-        {/* Version indicator - helps identify if latest code is running */}
-        <div className="text-xs text-gray-400 text-right mt-1">BrandCard v1.2</div>
+
+        {/* Description */}
+        {brand.description && (
+          <p className="mt-4 text-gray-600 dark:text-gray-300 text-sm line-clamp-2">
+            {brand.description}
+          </p>
+        )}
 
         {/* Social Links */}
         {(brand.socialLinks?.instagram || brand.socialLinks?.twitter || brand.socialLinks?.linkedin || brand.website) && (
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="flex gap-2 mt-4">
             {brand.socialLinks?.instagram && (
               <a 
                 href={normalizeUrl(brand.socialLinks.instagram)} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-gray-500 hover:text-primary dark:hover:text-primary-light transition-colors"
+                className="text-gray-500 hover:text-pink-500 dark:hover:text-pink-400 transition-colors"
               >
                 <FaInstagram className="h-5 w-5" />
               </a>
@@ -94,7 +103,7 @@ const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
                 href={normalizeUrl(brand.socialLinks.twitter)} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-gray-500 hover:text-primary dark:hover:text-primary-light transition-colors"
+                className="text-gray-500 hover:text-sky-400 dark:hover:text-sky-400 transition-colors"
               >
                 <FaTwitter className="h-5 w-5" />
               </a>
@@ -125,13 +134,19 @@ const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
         )}
         
         {/* Buttons */}
-        <div className="flex gap-2 mt-6">
+        <div className="flex gap-2 mt-4">
           <Link
             to={`/brand/${brandProfileId}`}
             className="flex-1 btn-primary text-center py-2 rounded-lg font-medium transition-all duration-200"
           >
             View Profile
           </Link>
+          
+          {user?.role === "influencer" && (
+            <button className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-medium text-center hover:opacity-90 transition shadow-lg">
+              Contact
+            </button>
+          )}
         </div>
       </div>
     </div>

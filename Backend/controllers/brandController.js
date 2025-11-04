@@ -85,10 +85,10 @@ export const getMyProfile = async (req, res) => {
       return sendError(res, 404, 'Brand profile not found');
     }
 
-    // Ensure user is still valid
-    const user = await User.findById(req.user.id).select(['_id', 'status']);
-    if (!user || user.status !== 'active') {
-      return sendError(res, 404, 'User not found or inactive');
+    // User exists if we got this far, no need to check status
+    const user = await User.findById(req.user.id).select(['_id']); // Only select the _id field we need
+    if (!user) {
+      return sendError(res, 404, 'User not found');
     }
 
     res.json({ success: true, profile });
@@ -108,10 +108,10 @@ export const getProfileById = async (req, res) => {
       return sendError(res, 400, 'Invalid user ID');
     }
 
-    // Check if user exists first
-    const user = await User.findById(req.params.userId).select(['_id', 'status']);
-    if (!user || user.status !== 'active') {
-      return sendError(res, 404, 'User not found or inactive');
+    // Check if user exists
+    const user = await User.findById(req.params.userId).select(['_id']);
+    if (!user) {
+      return sendError(res, 404, 'User not found');
     }
 
     const profile = await BrandProfile.findOne({ user: req.params.userId })

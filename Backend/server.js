@@ -80,7 +80,11 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+
+// Add a small comment to trigger redeployment
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server started on port ${PORT}`);
+});
 
 // Initialize WebSocket server
 initializeWebSocketServer(server);

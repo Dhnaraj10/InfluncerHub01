@@ -31,9 +31,17 @@ export const searchService = {
         throw new Error(`Search failed with status ${response.status}: ${errorText}`);
       }
       
-      const data = await response.json();
-      console.log('Influencer search results:', data);
-      return data;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('Influencer search results:', data);
+        return data;
+      } else {
+        const text = await response.text();
+        console.log('Received non-JSON response:', text);
+        throw new Error('Server returned non-JSON response');
+      }
     } catch (error) {
       console.error('Error searching influencers:', error);
       throw error;
@@ -62,9 +70,17 @@ export const searchService = {
         throw new Error(`Get all influencers failed with status ${response.status}: ${errorText}`);
       }
       
-      const data = await response.json();
-      console.log('All influencers results:', data);
-      return data;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('All influencers results:', data);
+        return data;
+      } else {
+        const text = await response.text();
+        console.log('Received non-JSON response:', text);
+        throw new Error('Server returned non-JSON response');
+      }
     } catch (error) {
       console.error('Error getting all influencers:', error);
       throw error;
@@ -93,9 +109,17 @@ export const searchService = {
         throw new Error(`Brand search failed with status ${response.status}: ${errorText}`);
       }
       
-      const data = await response.json();
-      console.log('Brand search results:', data);
-      return data;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('Brand search results:', data);
+        return data;
+      } else {
+        const text = await response.text();
+        console.log('Received non-JSON response:', text);
+        throw new Error('Server returned non-JSON response');
+      }
     } catch (error) {
       console.error('Error searching brands:', error);
       throw error;
@@ -124,9 +148,17 @@ export const searchService = {
         throw new Error(`Get all brands failed with status ${response.status}: ${errorText}`);
       }
       
-      const data = await response.json();
-      console.log('All brands results:', data);
-      return data;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('All brands results:', data);
+        return data;
+      } else {
+        const text = await response.text();
+        console.log('Received non-JSON response:', text);
+        throw new Error('Server returned non-JSON response');
+      }
     } catch (error) {
       console.error('Error getting all brands:', error);
       throw error;

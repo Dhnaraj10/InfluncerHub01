@@ -44,14 +44,21 @@ const PublicBrandProfile: React.FC = () => {
 
       try {
         setLoading(true);
-        const response = await axios.get<BrandProfile>(
+        const response = await axios.get<{ success: boolean; profile: BrandProfile }>(
           `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands/${brandId}`
         );
-        setBrandProfile(response.data);
+        
+        if (response.data.success) {
+          setBrandProfile(response.data.profile);
+        } else {
+          setError("Failed to load brand profile");
+          toast.error("Failed to load brand profile");
+        }
       } catch (err: any) {
         console.error("Error fetching brand profile:", err);
-        setError(err.response?.data?.msg || "Failed to load brand profile");
-        toast.error("Failed to load brand profile");
+        const errorMessage = err.response?.data?.msg || err.message || "Failed to load brand profile";
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -100,169 +107,125 @@ const PublicBrandProfile: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Brand Profile
-          </h1>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
-          >
-            Back
-          </button>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="relative h-64 bg-gradient-to-r from-primary to-secondary">
+          <div className="absolute inset-0 bg-black/20"></div>
+          <div className="absolute bottom-6 left-6 flex items-end gap-6">
+            {brandProfile.logoUrl ? (
+              <img 
+                src={brandProfile.logoUrl} 
+                alt={brandProfile.companyName} 
+                className="w-24 h-24 rounded-full border-4 border-white object-contain bg-white"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "https://placehold.co/100";
+                }}
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center border-4 border-white">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+            )}
+            <div>
+              <h1 className="text-4xl font-bold text-white">{brandProfile.companyName}</h1>
+              <p className="text-xl text-white/90">{brandProfile.industry}</p>
+            </div>
+          </div>
         </div>
 
-        {/* Profile Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center space-x-4">
-              {brandProfile.logoUrl ? (
-                <img 
-                  src={brandProfile.logoUrl} 
-                  alt="Company logo" 
-                  className="w-16 h-16 object-contain rounded-full"
-                />
-              ) : (
-                <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {brandProfile.companyName}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {brandProfile.industry}
+        {/* Content */}
+        <div className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2">
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">About</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  {brandProfile.description || "No description provided."}
                 </p>
               </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {brandProfile.budgetPerPost && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {formatPrice(brandProfile.budgetPerPost)}
+
+              {/* Social Links */}
+              {(brandProfile.socialLinks?.instagram || 
+                brandProfile.socialLinks?.twitter || 
+                brandProfile.socialLinks?.linkedin || 
+                brandProfile.website) && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Connect</h2>
+                  <div className="flex flex-wrap gap-4">
+                    {brandProfile.socialLinks?.instagram && (
+                      <a 
+                        href={normalizeUrl(brandProfile.socialLinks.instagram)} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition"
+                      >
+                        <FaInstagram className="h-5 w-5" />
+                        <span>Instagram</span>
+                      </a>
+                    )}
+                    
+                    {brandProfile.socialLinks?.twitter && (
+                      <a 
+                        href={normalizeUrl(brandProfile.socialLinks.twitter)} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition"
+                      >
+                        <FaTwitter className="h-5 w-5" />
+                        <span>Twitter</span>
+                      </a>
+                    )}
+                    
+                    {brandProfile.socialLinks?.linkedin && (
+                      <a 
+                        href={normalizeUrl(brandProfile.socialLinks.linkedin)} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition"
+                      >
+                        <FaLinkedin className="h-5 w-5" />
+                        <span>LinkedIn</span>
+                      </a>
+                    )}
+                    
+                    {brandProfile.website && (
+                      <a 
+                        href={normalizeUrl(brandProfile.website)} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition"
+                      >
+                        <FaLink className="h-5 w-5" />
+                        <span>Website</span>
+                      </a>
+                    )}
                   </div>
-                  <div className="text-gray-600 dark:text-gray-400">Budget per post</div>
                 </div>
               )}
             </div>
-          </div>
-          
-          {/* Description */}
-          {brandProfile.description && (
-            <div className="mt-4">
-              <p className="text-gray-700 dark:text-gray-300">
-                {brandProfile.description}
-              </p>
-            </div>
-          )}
-          
-          {/* Contact Info */}
-          <div className="mt-4 flex flex-wrap gap-4">
-            {brandProfile.contactEmail && (
-              <div className="flex items-center text-gray-600 dark:text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span>{brandProfile.contactEmail}</span>
-              </div>
-            )}
-            
-            {brandProfile.website && (
-              <div className="flex items-center text-gray-600 dark:text-gray-400">
-                <FaLink className="mr-2" />
-                <a 
-                  href={normalizeUrl(brandProfile.website)} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  Website
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column - Main content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Social Links */}
-            {(brandProfile.socialLinks?.instagram || brandProfile.socialLinks?.twitter || brandProfile.socialLinks?.linkedin) && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Social Media</h3>
-                <div className="flex flex-wrap gap-4">
-                  {brandProfile.socialLinks?.instagram && (
-                    <a 
-                      href={normalizeUrl(brandProfile.socialLinks.instagram)} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center space-x-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
-                    >
-                      <FaInstagram size={20} />
-                      <span>Instagram</span>
-                    </a>
-                  )}
-                  
-                  {brandProfile.socialLinks?.twitter && (
-                    <a 
-                      href={normalizeUrl(brandProfile.socialLinks.twitter)} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center space-x-2 bg-gradient-to-r from-blue-400 to-blue-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
-                    >
-                      <FaTwitter size={20} />
-                      <span>Twitter</span>
-                    </a>
-                  )}
-                  
-                  {brandProfile.socialLinks?.linkedin && (
-                    <a 
-                      href={normalizeUrl(brandProfile.socialLinks.linkedin)} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center space-x-2 bg-gradient-to-r from-blue-700 to-blue-900 text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
-                    >
-                      <FaLinkedin size={20} />
-                      <span>LinkedIn</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right column - Additional info */}
-          <div className="space-y-6">
-            {/* Contact Information */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Contact Information</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Company</label>
-                  <p className="mt-1 font-medium">{brandProfile.companyName}</p>
-                </div>
+            {/* Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Brand Details</h2>
                 
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Industry</label>
-                  <p className="mt-1 font-medium">{brandProfile.industry}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Contact Email</label>
-                  <p className="mt-1 font-medium">{brandProfile.contactEmail}</p>
-                </div>
-                
-                {brandProfile.budgetPerPost && (
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Budget per Post</label>
-                    <p className="mt-1 font-medium">{formatPrice(brandProfile.budgetPerPost)}</p>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Contact Email</h3>
+                    <p className="text-gray-900 dark:text-white">{brandProfile.contactEmail}</p>
                   </div>
-                )}
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Budget per Post</h3>
+                    <p className="text-2xl font-bold text-primary">
+                      {brandProfile.budgetPerPost ? formatPrice(brandProfile.budgetPerPost) : 'N/A'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

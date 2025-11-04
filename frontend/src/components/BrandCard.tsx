@@ -73,7 +73,7 @@ const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
         </p>
         
         {/* Version indicator - helps identify if latest code is running */}
-        <div className="text-xs text-gray-400 text-right mt-1">BrandCard v1.1</div>
+        <div className="text-xs text-gray-400 text-right mt-1">BrandCard v1.2</div>
 
         {/* Social Links */}
         {(brand.socialLinks?.instagram || brand.socialLinks?.twitter || brand.socialLinks?.linkedin || brand.website) && (

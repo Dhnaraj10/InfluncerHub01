@@ -231,7 +231,7 @@ const SearchPage: React.FC = () => {
           ) : (
             <>
               <div className="mb-4 text-center text-gray-600 dark:text-gray-400">
-                Found {results.length} {searchType}
+                Found {results ? results.length : 0} {searchType}
               </div>
               
               {results && results.length > 0 ? (

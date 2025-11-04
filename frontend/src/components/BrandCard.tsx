@@ -70,7 +70,7 @@ const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
 
         {/* Social Links */}
         {(brand.socialLinks?.instagram || brand.socialLinks?.twitter || brand.socialLinks?.linkedin || brand.website) && (
-          <div className="mt-4 flex space-x-3">
+          <div className="mt-4 flex flex-wrap gap-3">
             {brand.socialLinks?.instagram && (
               <a 
                 href={normalizeUrl(brand.socialLinks.instagram)} 

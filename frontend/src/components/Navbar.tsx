@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../useAuth";
-import ThemeToggle from "./ThemeToggle";
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -85,7 +84,6 @@ const Navbar: React.FC = () => {
 
           {/* Desktop menu */}
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
-            <ThemeToggle className="mr-2" />
             {isAuthenticated ? (
               <>
                 <Link

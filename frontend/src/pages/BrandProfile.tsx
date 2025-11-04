@@ -1,7 +1,7 @@
 // frontend/src/pages/BrandProfile.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { FaInstagram, FaTwitter, FaLinkedin, FaLink, FaMapMarkerAlt } from 'react-icons/fa';
@@ -493,6 +493,12 @@ const BrandProfile: React.FC = () => {
                       <div className="text-gray-600 dark:text-gray-400">Budget per post</div>
                     </div>
                   )}
+                  <button
+                    onClick={() => setIsEditMode(true)}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                  >
+                    Edit Profile
+                  </button>
                 </div>
               </div>
               

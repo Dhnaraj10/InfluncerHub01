@@ -51,410 +51,358 @@ const CreateSponsorship: React.FC = () => {
       return;
     }
 
-    setLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.append('q', query);
-      params.append('limit', '20'); // Limit results for performance
-
-      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
+      setLoading(true);
+      const res = await fetch(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/search?q=${encodeURIComponent(query)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (!res.ok) throw new Error("Failed to search influencers");
       const data = await res.json();
-      const results = data.results || data.data || data;
-      setFilteredInfluencers(results);
+      setFilteredInfluencers(data.results || []);
     } catch (err: any) {
-      toast.error(err.message || "Error searching influencers");
-      setFilteredInfluencers([]);
+      console.error(err);
+      toast.error(err.message || "Failed to search influencers");
     } finally {
       setLoading(false);
     }
   }, [token]);
 
-  // Debounce search to avoid too many API calls
+  // Debounce search
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchQuery) {
-        performSearch(searchQuery);
-      } else {
-        setFilteredInfluencers([]);
-      }
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
+    const timeoutId = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timeoutId);
   }, [searchQuery, performSearch]);
 
-  const addDeliverable = () => {
+  // Handle adding a deliverable
+  const handleAddDeliverable = () => {
     if (deliverableInput.trim() && !deliverables.includes(deliverableInput.trim())) {
-      setDeliverables([...deliverables, deliverableInput.trim()]);
+      const newDeliverables = [...deliverables, deliverableInput.trim()];
+      setDeliverables(newDeliverables);
+      setValue("deliverables", newDeliverables);
       setDeliverableInput("");
     }
   };
 
-  const removeDeliverable = (index: number) => {
-    setDeliverables(deliverables.filter((_, i) => i !== index));
+  // Handle removing a deliverable
+  const handleRemoveDeliverable = (index: number) => {
+    const newDeliverables = deliverables.filter((_, i) => i !== index);
+    setDeliverables(newDeliverables);
+    setValue("deliverables", newDeliverables);
   };
 
-  // Toggle influencer selection
-  const toggleInfluencerSelection = (influencer: InfluencerProfile) => {
-    setSelectedInfluencers(prev => {
-      const isSelected = prev.some(i => i._id === influencer._id);
-      let newSelection;
-      
-      if (isSelected) {
-        // Remove from selection
-        newSelection = prev.filter(i => i._id !== influencer._id);
-      } else {
-        // Add to selection
-        newSelection = [...prev, influencer];
-      }
-      
-      // Update form value
-      setValue("influencerProfileIds", newSelection.map(i => i._id));
-      return newSelection;
-    });
+  // Handle selecting an influencer
+  const handleSelectInfluencer = (influencer: InfluencerProfile) => {
+    if (!selectedInfluencers.some(i => i._id === influencer._id)) {
+      const newSelected = [...selectedInfluencers, influencer];
+      setSelectedInfluencers(newSelected);
+      setValue("influencerProfileIds", newSelected.map(i => i._id));
+    }
+    setSearchQuery("");
+    setFilteredInfluencers([]);
   };
 
-  // Remove selected influencer
-  const removeSelectedInfluencer = useCallback((influencerId: string) => {
-    setSelectedInfluencers(prev => {
-      const newSelection = prev.filter(i => i._id !== influencerId);
-      setValue("influencerProfileIds", newSelection.map(i => i._id));
-      return newSelection;
-    });
-  }, [setValue]);
+  // Handle removing a selected influencer
+  const handleRemoveInfluencer = (id: string) => {
+    const newSelected = selectedInfluencers.filter(i => i._id !== id);
+    setSelectedInfluencers(newSelected);
+    setValue("influencerProfileIds", newSelected.map(i => i._id));
+  };
 
-  const onSubmit = useCallback(async (data: CreateSponsorshipFormValues) => {
+  // Handle form submission
+  const onSubmit = async (data: CreateSponsorshipFormValues) => {
     if (data.influencerProfileIds.length === 0) {
       toast.error("Please select at least one influencer");
       return;
     }
 
     try {
-      // Show loading state
-      setLoading(true);
-      
-      // Create sponsorships sequentially to avoid overwhelming the server
-      const createdSponsorships = [];
-      let errorCount = 0;
-      
-      for (const influencerId of data.influencerProfileIds) {
-        try {
-          const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sponsorships`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              influencer: influencerId,
-              title: data.title,
-              description: data.description,
-              budget: data.budget,
-              deliverables: deliverables, // Use the state deliverables, not form data
-            }),
-          });
+      const responses = await Promise.all(
+        data.influencerProfileIds.map(async (influencerId) => {
+          const sponsorshipData = {
+            influencer: influencerId,
+            title: data.title,
+            description: data.description,
+            budget: data.budget,
+            deliverables: data.deliverables,
+          };
 
-          if (res.ok) {
-            const sponsorship = await res.json();
-            createdSponsorships.push(sponsorship);
-          } else {
+          const res = await fetch(
+            `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/sponsorships`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(sponsorshipData),
+            }
+          );
+
+          if (!res.ok) {
             const errorData = await res.json();
-            console.error(`Failed to create sponsorship for influencer ${influencerId}:`, errorData.message);
-            errorCount++;
+            throw new Error(errorData.message || "Failed to create sponsorship");
           }
-        } catch (err) {
-          console.error(`Error creating sponsorship for influencer ${influencerId}:`, err);
-          errorCount++;
-        }
-      }
-      
-      // Provide feedback based on results
-      if (createdSponsorships.length > 0) {
-        if (errorCount === 0) {
-          toast.success(`Successfully sent sponsorship offers to ${createdSponsorships.length} influencer(s)!`);
-        } else {
-          toast.success(`Sent sponsorship offers to ${createdSponsorships.length} influencer(s). ${errorCount} failed.`);
-        }
-        // Navigate to sponsorships page after successful submission
-        navigate("/sponsorships");
-      } else {
-        toast.error("Failed to send any sponsorship offers. Please try again.");
-      }
+
+          return res.json();
+        })
+      );
+
+      toast.success(`Successfully created ${responses.length} sponsorship(s)!`);
+      navigate("/sponsorships");
     } catch (err: any) {
-      toast.error(err.message || "Error creating sponsorships");
-    } finally {
-      setLoading(false);
+      console.error(err);
+      toast.error(err.message || "Failed to create sponsorships");
     }
-  }, [token, navigate, toast, deliverables]);
-
-  if (user?.role !== "brand") {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Access Denied</h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Only brand users can create sponsorships. Your current role is: {user?.role}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading influencers...
-      </div>
-    );
-  }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Create Sponsorship</h1>
+    <div className="min-h-screen bg-gradient-to-b from-background-light to-white dark:from-gray-900 dark:to-gray-900 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Create Sponsorship</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Create a new sponsorship offer for influencers
+            </p>
+          </div>
           <button
             onClick={() => navigate("/sponsorships")}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+            className="btn-secondary px-4 py-2 rounded-lg font-medium"
           >
             Back to Sponsorships
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Influencer Search */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Search and Select Influencer *
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by handle, category, or tag..."
-                className="input w-full"
-                disabled={loading}
-              />
-              {searchQuery && (
-                <button 
-                  type="button" 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setFilteredInfluencers([]);
-                  }}
-                  disabled={loading}
-                >
-                  &times;
-                </button>
-              )}
-            </div>
-            
-            {loading && searchQuery ? (
-              <div className="flex items-center justify-center py-4 text-gray-500">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Searching influencers...
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6">
+            <div className="space-y-6">
+              {/* Title */}
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Title *
+                </label>
+                <input
+                  id="title"
+                  {...register("title", { required: "Title is required" })}
+                  placeholder="Sponsored post for summer collection"
+                  className="input w-full"
+                />
+                {errors.title && (
+                  <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
+                )}
               </div>
-            ) : (
-              <>
-                {filteredInfluencers.length > 0 ? (
-                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg max-h-60 overflow-y-auto mt-2">
-                    {filteredInfluencers.map((influencer) => (
-                      <div 
-                        key={influencer._id}
-                        className={`p-3 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                          selectedInfluencers.some(i => i._id === influencer._id) ? 'bg-blue-50 dark:bg-blue-900/30' : ''
-                        }`}
-                        onClick={() => toggleInfluencerSelection(influencer)}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white">
-                              @{influencer.handle}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {influencer.followerCount?.toLocaleString()} followers
-                            </div>
-                          </div>
-                          {influencer.categories && influencer.categories.length > 0 && (
-                            <div className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                              {influencer.categories[0]?.name || 'No category'}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+
+              {/* Description */}
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  {...register("description")}
+                  placeholder="Describe the sponsorship opportunity..."
+                  rows={4}
+                  className="input w-full"
+                />
+              </div>
+
+              {/* Budget */}
+              <div>
+                <label htmlFor="budget" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Budget (INR) *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                    ₹
                   </div>
-                ) : searchQuery ? (
-                  <div className="text-center py-4 text-gray-500">
-                    No influencers found matching your search.
-                  </div>
-                ) : null}
-              </>
-            )}
-            
-            {/* Selected Influencers */}
-            {selectedInfluencers.length > 0 && (
+                  <input
+                    id="budget"
+                    type="number"
+                    {...register("budget", { 
+                      required: "Budget is required",
+                      min: { value: 1, message: "Budget must be at least ₹1" }
+                    })}
+                    placeholder="5000"
+                    className="input w-full pl-8"
+                  />
+                </div>
+                {errors.budget && (
+                  <p className="mt-1 text-sm text-red-600">{errors.budget.message}</p>
+                )}
+              </div>
+
+              {/* Influencer Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Selected Influencers
+                  Select Influencers *
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {selectedInfluencers.map((influencer) => (
-                    <span
-                      key={influencer._id}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                    >
-                      @{influencer.handle}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeSelectedInfluencer(influencer._id);
-                        }}
-                        className="ml-2 text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-100"
-                        disabled={loading}
-                      >
-                        &times;
-                      </button>
-                    </span>
-                  ))}
+                
+                {/* Search Input */}
+                <div className="relative mb-4">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search influencers by name or handle..."
+                    className="input w-full pl-10"
+                  />
                 </div>
+
+                {/* Selected Influencers */}
+                {selectedInfluencers.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selected Influencers:</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedInfluencers.map((influencer) => (
+                        <div 
+                          key={influencer._id} 
+                          className="flex items-center bg-primary/10 dark:bg-primary/20 rounded-full px-3 py-1"
+                        >
+                          <span className="text-sm text-primary dark:text-primary-light">
+                            {typeof influencer.user === 'object' ? influencer.user.name : influencer.handle}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveInfluencer(influencer._id)}
+                            className="ml-2 text-primary dark:text-primary-light hover:text-primary-dark"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Search Results */}
+                {searchQuery && (
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-60 overflow-y-auto">
+                    {loading ? (
+                      <div className="py-4 text-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary mx-auto"></div>
+                      </div>
+                    ) : filteredInfluencers.length > 0 ? (
+                      <ul>
+                        {filteredInfluencers.map((influencer) => (
+                          <li 
+                            key={influencer._id} 
+                            className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                            onClick={() => handleSelectInfluencer(influencer)}
+                          >
+                            <div className="flex items-center">
+                              {typeof influencer.user === 'object' && (influencer.user as any).avatar ? (
+                                <img 
+                                  src={(influencer.user as any).avatar} 
+                                  alt={typeof influencer.user === 'object' ? influencer.user.name : influencer.handle} 
+                                  className="h-10 w-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                  <span className="text-gray-500 dark:text-gray-400 font-medium">
+                                    {typeof influencer.user === 'object' ? influencer.user.name?.charAt(0) : influencer.handle?.charAt(0) || "U"}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {typeof influencer.user === 'object' ? influencer.user.name : influencer.handle}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  @{influencer.handle}
+                                </div>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="py-4 text-center text-gray-500 dark:text-gray-400">
+                        No influencers found
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {errors.influencerProfileIds && (
+                  <p className="mt-1 text-sm text-red-600">{errors.influencerProfileIds.message}</p>
+                )}
               </div>
-            )}
-            
-            {/* Hidden input for form validation */}
-            <input 
-              type="hidden" 
-              {...register("influencerProfileIds", { 
-                validate: (value) => value.length > 0 || "Please select at least one influencer"
-              })} 
-            />
-            {errors.influencerProfileIds && (
-              <p className="text-red-500 text-sm mt-1">{errors.influencerProfileIds.message}</p>
-            )}
-          </div>
 
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Title *
-            </label>
-            <input
-              {...register("title", { required: "Title is required" })}
-              className="input w-full"
-              placeholder="Sponsored post for summer collection"
-            />
-            {errors.title && (
-              <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
-            )}
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Description
-            </label>
-            <textarea
-              {...register("description")}
-              rows={4}
-              className="input w-full"
-              placeholder="Describe the sponsorship opportunity..."
-            />
-          </div>
-
-          {/* Budget */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Budget (INR)
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                ₹
-              </div>
-              <input
-                type="number"
-                {...register("budget", { valueAsNumber: true, min: 0 })}
-                className="input pl-8 w-full"
-                placeholder="1000"
-              />
-            </div>
-            {errors.budget && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.budget.message || "Please enter a valid budget"}
-              </p>
-            )}
-          </div>
-
-          {/* Deliverables */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Deliverables
-            </label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={deliverableInput}
-                onChange={(e) => setDeliverableInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addDeliverable();
-                  }
-                }}
-                className="input flex-1"
-                placeholder="e.g., 1 Instagram post, 2 stories"
-                disabled={loading}
-              />
-              <button
-                type="button"
-                onClick={addDeliverable}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
-                disabled={loading}
-              >
-                Add
-              </button>
-            </div>
-            {deliverables.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {deliverables.map((d, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+              {/* Deliverables */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Deliverables
+                </label>
+                
+                {/* Add Deliverable Input */}
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={deliverableInput}
+                    onChange={(e) => setDeliverableInput(e.target.value)}
+                    placeholder="e.g., Instagram post, YouTube video"
+                    className="input flex-1"
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddDeliverable())}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddDeliverable}
+                    className="btn-primary px-4 py-2 rounded-lg font-medium"
                   >
-                    {d}
-                    <button
-                      type="button"
-                      onClick={() => removeDeliverable(i)}
-                      className="ml-2 text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-100"
-                      disabled={loading}
-                    >
-                      &times;
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+                    Add
+                  </button>
+                </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition font-medium disabled:opacity-50"
-              disabled={selectedInfluencers.length === 0 || loading}
-            >
-              {loading ? "Sending Offers..." : `Send Sponsorship Offer${selectedInfluencers.length > 1 ? ` to ${selectedInfluencers.length} Influencers` : ''}`}
-            </button>
-          </div>
-        </form>
+                {/* Deliverables List */}
+                {deliverables.length > 0 && (
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                    <ul className="space-y-2">
+                      {deliverables.map((deliverable, index) => (
+                        <li key={index} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded px-3 py-2">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{deliverable}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDeliverable(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            &times;
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => navigate("/sponsorships")}
+                  className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary px-6 py-3 rounded-lg font-medium"
+                >
+                  Create Sponsorship
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -40,4 +40,7 @@ router.put("/:id/complete", auth, completeSponsorship);
 // Get recent activities for a user
 router.get("/activities", auth, getRecentActivities);
 
+// Get all sponsorships (for dashboard)
+router.get("/", auth, getMySponsorships);
+
 export default router;

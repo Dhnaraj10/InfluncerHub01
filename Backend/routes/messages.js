@@ -16,11 +16,29 @@ router.get("/", auth, async (req, res) => {
       return res.status(400).json({ error: "Recipient ID is required" });
     }
     
+    // Ensure we have a proper recipient ID (not an object)
+    let properRecipientId = recipient;
+    if (typeof recipient === 'object' && recipient !== null) {
+      // If recipient is an object, try to extract the _id property
+      properRecipientId = recipient._id ? recipient._id.toString() : recipient.id ? recipient.id.toString() : null;
+    } else if (typeof recipient === 'string' && recipient.match(/ObjectId\(/)) {
+      // If it's a string representation of an ObjectId, extract the ID
+      const match = recipient.match(/'([^']+)'/);
+      if (match && match[1]) {
+        properRecipientId = match[1];
+      }
+    }
+    
+    // Validate recipientId
+    if (!properRecipientId) {
+      return res.status(400).json({ error: "Valid recipient ID is required" });
+    }
+    
     // Check if there's a connection between users
     const connection = await UserConnection.findOne({
       $or: [
-        { user1: req.user.id, user2: recipient },
-        { user1: recipient, user2: req.user.id }
+        { user1: req.user.id, user2: properRecipientId },
+        { user1: properRecipientId, user2: req.user.id }
       ]
     });
     
@@ -28,8 +46,8 @@ router.get("/", auth, async (req, res) => {
     if (!connection) {
       const request = await MessageRequest.findOne({
         $or: [
-          { from: req.user.id, to: recipient },
-          { from: recipient, to: req.user.id }
+          { from: req.user.id, to: properRecipientId },
+          { from: properRecipientId, to: req.user.id }
         ]
       });
       
@@ -42,8 +60,8 @@ router.get("/", auth, async (req, res) => {
     // Get messages between current user and recipient
     const userMessages = await Message.find({
       $or: [
-        { sender: req.user.id, recipient: recipient },
-        { sender: recipient, recipient: req.user.id }
+        { sender: req.user.id, recipient: properRecipientId },
+        { sender: properRecipientId, recipient: req.user.id }
       ]
     })
     .sort({ timestamp: 1 })
@@ -82,18 +100,34 @@ router.get("/conversations", auth, async (req, res) => {
     const conversations = {};
     
     messages.forEach(message => {
-      // Safely get partner ID
-      const partnerId = message.sender && message.sender.toString() === req.user.id ? 
-        (message.recipient && message.recipient.toString()) : 
-        (message.sender && message.sender.toString());
+      // Safely get partner ID and ensure it's a proper string ID
+      let partnerId;
+      if (message.sender && message.sender.toString() === req.user.id) {
+        // Current user is sender, so partner is recipient
+        partnerId = typeof message.recipient === 'object' ? 
+          (message.recipient._id ? message.recipient._id.toString() : message.recipient.toString()) : 
+          message.recipient.toString();
+      } else if (message.recipient && message.recipient.toString() === req.user.id) {
+        // Current user is recipient, so partner is sender
+        partnerId = typeof message.sender === 'object' ? 
+          (message.sender._id ? message.sender._id.toString() : message.sender.toString()) : 
+          message.sender.toString();
+      }
       
       // Skip if partnerId is not available
       if (!partnerId) return;
       
       // Safely get partner name
-      const partnerName = message.sender && message.sender.toString() === req.user.id ? 
-        (message.recipient && message.recipient.name) : 
-        (message.sender && message.sender.name);
+      let partnerName;
+      if (message.sender && message.sender.toString() === req.user.id) {
+        partnerName = typeof message.recipient === 'object' ? 
+          (message.recipient.name || "Unknown User") : 
+          "Unknown User";
+      } else {
+        partnerName = typeof message.sender === 'object' ? 
+          (message.sender.name || "Unknown User") : 
+          "Unknown User";
+      }
       
       // If this is the first message in this conversation, or if this message is more recent
       if (!conversations[partnerId] || 
@@ -104,9 +138,10 @@ router.get("/conversations", auth, async (req, res) => {
           userName: partnerName,
           lastMessage: message.content,
           timestamp: message.timestamp,
-          unreadCount: message.recipient?.toString() === req.user.id && !message.status ? 1 : 0
+          unreadCount: message.recipient && message.recipient.toString() === req.user.id && !message.status ? 
+            (conversations[partnerId] ? conversations[partnerId].unreadCount + 1 : 1) : 0
         };
-      } else if (message.recipient?.toString() === req.user.id && !message.status) {
+      } else if (message.recipient && message.recipient.toString() === req.user.id && !message.status) {
         // Increment unread count for received messages
         conversations[partnerId].unreadCount += 1;
       }
@@ -238,26 +273,29 @@ router.post("/requests/:requestId/accept", auth, async (req, res) => {
     request.status = 'accepted';
     await request.save();
     
-    // Create connection between users
+    // Create connection between users - ensure we're using proper IDs
+    const fromUserId = typeof request.from === 'object' ? request.from._id.toString() : request.from.toString();
+    const toUserId = typeof request.to === 'object' ? request.to._id.toString() : request.to.toString();
+    
     const existingConnection = await UserConnection.findOne({
       $or: [
-        { user1: request.from, user2: request.to },
-        { user1: request.to, user2: request.from }
+        { user1: fromUserId, user2: toUserId },
+        { user1: toUserId, user2: fromUserId }
       ]
     });
     
     if (!existingConnection) {
       const connection = new UserConnection({
-        user1: request.from.toString(), // Ensure it's a string ID
-        user2: request.to.toString()     // Ensure it's a string ID
+        user1: fromUserId,
+        user2: toUserId
       });
       await connection.save();
     }
     
     // Create the first message from the request
     const message = new Message({
-      sender: request.from.toString(),    // Ensure it's a string ID
-      recipient: request.to.toString(),   // Ensure it's a string ID
+      sender: fromUserId,
+      recipient: toUserId,
       content: request.content
     });
     

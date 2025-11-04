@@ -62,6 +62,25 @@ export const initializeWebSocketServer = (server) => {
           // Handle chat message
           const { content, recipientId } = message.data;
           
+          // Ensure we have a proper recipient ID (not an object)
+          let properRecipientId = recipientId;
+          if (typeof recipientId === 'object' && recipientId !== null) {
+            // If recipientId is an object, try to extract the _id property
+            properRecipientId = recipientId._id ? recipientId._id.toString() : recipientId.id ? recipientId.id.toString() : null;
+          } else if (typeof recipientId === 'string' && recipientId.match(/ObjectId\(/)) {
+            // If it's a string representation of an ObjectId, extract the ID
+            const match = recipientId.match(/'([^']+)'/);
+            if (match && match[1]) {
+              properRecipientId = match[1];
+            }
+          }
+          
+          // Validate recipientId
+          if (!properRecipientId) {
+            console.error("Invalid recipientId:", recipientId);
+            return;
+          }
+          
           // Add sender info
           message.data.senderId = ws.userId;
           message.data.timestamp = new Date().toISOString();
@@ -70,19 +89,19 @@ export const initializeWebSocketServer = (server) => {
           let dbMessage;
           try {
             dbMessage = new Message({
-              sender: ws.userId, // This should be a string ID
-              recipient: recipientId, // This should be a string ID
+              sender: ws.userId,
+              recipient: properRecipientId, // Use the proper recipient ID
               content: content,
               status: 'sent'  // Default status
             });
             await dbMessage.save();
             
-            // Populate sender info for response
+            // Populate sender info
             await dbMessage.populate('sender', 'name');
             message.data = { 
               ...message.data, 
               ...dbMessage.toObject(),
-              senderId: dbMessage.sender._id.toString(), // Ensure it's a string ID
+              senderId: dbMessage.sender._id.toString(), // Convert ObjectId to string
               status: dbMessage.status
             };
           } catch (err) {
@@ -96,7 +115,7 @@ export const initializeWebSocketServer = (server) => {
           }
           
           // Find recipient WebSocket
-          const recipientWs = clients.get(recipientId);
+          const recipientWs = clients.get(properRecipientId);
           
           // Send to recipient if online
           if (recipientWs && recipientWs.readyState === recipientWs.OPEN) {
@@ -129,7 +148,7 @@ export const initializeWebSocketServer = (server) => {
             ws.send(JSON.stringify(responseMessage));
           }
           
-          console.log(`Message from ${ws.userId} to ${recipientId}: ${content}`);
+          console.log(`Message from ${ws.userId} to ${properRecipientId}: ${content}`);
         } else if (message.type === 'messageRequest' && ws.userId) {
           // Handle message request
           const { content, recipientId } = message.data;
@@ -141,8 +160,8 @@ export const initializeWebSocketServer = (server) => {
           // Save message request to database
           try {
             const dbRequest = new MessageRequest({
-              from: ws.userId, // This should be a string ID
-              to: recipientId, // This should be a string ID
+              from: ws.userId,
+              to: recipientId,
               content: content
             });
             await dbRequest.save();
@@ -189,15 +208,15 @@ export const initializeWebSocketServer = (server) => {
               // Create connection if it doesn't exist
               const existingConnection = await UserConnection.findOne({
                 $or: [
-                  { user1: request.from.toString(), user2: request.to.toString() },
-                  { user1: request.to.toString(), user2: request.from.toString() }
+                  { user1: request.from, user2: request.to },
+                  { user1: request.to, user2: request.from }
                 ]
               });
               
               if (!existingConnection) {
                 const connection = new UserConnection({
-                  user1: request.from.toString(), // Ensure it's a string ID
-                  user2: request.to.toString()    // Ensure it's a string ID
+                  user1: request.from,
+                  user2: request.to
                 });
                 await connection.save();
               }

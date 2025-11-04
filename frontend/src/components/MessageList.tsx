@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../useAuth";
+import axios from "axios";
 import websocketService from "../services/websocket";
 
 interface Conversation {
@@ -32,41 +33,49 @@ const MessageList: React.FC = () => {
     };
   }, [token]);
 
-  const loadConversations = () => {
-    // In a real app, you would fetch conversations from an API
-    // For now, we'll simulate with sample data
-    const sampleConversations: Conversation[] = [
-      {
-        id: "1",
-        userId: "user1",
-        userName: "Alex Johnson",
-        lastMessage: "Sure, let's schedule a call to discuss the details",
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        unreadCount: 2,
-        isOnline: true
-      },
-      {
-        id: "2",
-        userId: "user2",
-        userName: "Sarah Miller",
-        lastMessage: "Thanks for the proposal, I'll review it by tomorrow",
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        unreadCount: 0,
-        isOnline: false
-      },
-      {
-        id: "3",
-        userId: "user3",
-        userName: "TechBrand Inc",
-        lastMessage: "We've approved your collaboration request!",
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-        unreadCount: 1,
-        isOnline: true
-      }
-    ];
+  const loadConversations = async () => {
+    if (!token) return;
     
-    setConversations(sampleConversations);
-    setLoading(false);
+    try {
+      setLoading(true);
+      // In a real app, you would fetch conversations from an API
+      // For now, we'll simulate with sample data
+      const sampleConversations: Conversation[] = [
+        {
+          id: "1",
+          userId: "user1",
+          userName: "Alex Johnson",
+          lastMessage: "Sure, let's schedule a call to discuss the details",
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          unreadCount: 2,
+          isOnline: true
+        },
+        {
+          id: "2",
+          userId: "user2",
+          userName: "Sarah Miller",
+          lastMessage: "Thanks for the proposal, I'll review it by tomorrow",
+          timestamp: new Date(Date.now() - 86400000).toISOString(),
+          unreadCount: 0,
+          isOnline: false
+        },
+        {
+          id: "3",
+          userId: "user3",
+          userName: "TechBrand Inc",
+          lastMessage: "We've approved your collaboration request!",
+          timestamp: new Date(Date.now() - 172800000).toISOString(),
+          unreadCount: 1,
+          isOnline: true
+        }
+      ];
+      
+      setConversations(sampleConversations);
+    } catch (err) {
+      console.error("Error loading conversations:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleNewMessage = (message: any) => {

@@ -77,6 +77,54 @@ export const initializeWebSocketServer = (server) => {
           }
           
           console.log(`Message from ${ws.userId} to ${recipientId}: ${content}`);
+        } else if (message.type === 'messageRequest' && ws.userId) {
+          // Handle message request
+          const { content, recipientId } = message.data;
+          
+          // Add sender info
+          message.data.senderId = ws.userId;
+          message.data.timestamp = new Date().toISOString();
+          
+          // Find recipient WebSocket
+          const recipientWs = clients.get(recipientId);
+          
+          // Send request notification to recipient if online
+          if (recipientWs && recipientWs.readyState === recipientWs.OPEN) {
+            recipientWs.send(JSON.stringify({
+              type: 'messageRequest',
+              data: message.data
+            }));
+          }
+          
+          // Send confirmation back to sender
+          if (ws.readyState === ws.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'messageRequestConfirmation',
+              data: message.data
+            }));
+          }
+          
+          console.log(`Message request from ${ws.userId} to ${recipientId}: ${content}`);
+        } else if (message.type === 'requestAccepted' && ws.userId) {
+          // Handle request acceptance
+          const { requestId, fromUserId } = message.data;
+          
+          // Notify the requester
+          const requesterWs = clients.get(fromUserId);
+          if (requesterWs && requesterWs.readyState === requesterWs.OPEN) {
+            requesterWs.send(JSON.stringify({
+              type: 'requestAccepted',
+              data: { requestId }
+            }));
+          }
+          
+          // Send confirmation back to accepter
+          if (ws.readyState === ws.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'requestAcceptedConfirmation',
+              data: { requestId }
+            }));
+          }
         }
       } catch (err) {
         console.error("Error handling WebSocket message:", err);

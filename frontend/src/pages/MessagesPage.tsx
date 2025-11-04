@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import websocketService from "../services/websocket";
 import axios from "axios";
 import MessageList from "../components/MessageList";
+import MessageRequests from "../components/MessageRequests";
 
 interface Message {
   id: string;
@@ -23,6 +24,7 @@ const MessagesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [recipient, setRecipient] = useState<{ id: string; name: string } | null>(null);
   const [connected, setConnected] = useState(false);
+  const [activeTab, setActiveTab] = useState<"messages" | "requests">("messages");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get recipient from URL query params
@@ -69,6 +71,14 @@ const MessagesPage: React.FC = () => {
         (message.data.senderId === user?._id && message.data.recipientId === recipient?.id)
       ) {
         setMessages(prev => [...prev, message.data]);
+      }
+    } else if (message.type === 'messageRequestConfirmation') {
+      // Show confirmation that request was sent
+      console.log("Message request sent successfully");
+    } else if (message.type === 'requestAccepted') {
+      // Reload messages when a request is accepted
+      if (recipient) {
+        loadMessages();
       }
     }
   };
@@ -142,7 +152,7 @@ const MessagesPage: React.FC = () => {
       });
 
       // Also send to API for persistence
-      await axios.post(
+      const res = await axios.post(
         `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages`,
         { content: newMessage, recipientId: recipient.id },
         {
@@ -150,9 +160,23 @@ const MessagesPage: React.FC = () => {
         }
       );
 
+      // If it's a request, show appropriate message
+      if (res.data.type === 'request') {
+        setNewMessage("");
+        // Show a message that the request was sent
+        alert("Message request sent! You'll be able to chat once they accept your request.");
+        // Go back to message list
+        navigate('/messages');
+        return;
+      }
+
       setNewMessage("");
-    } catch (err) {
-      console.error("Error sending message:", err);
+    } catch (err: any) {
+      if (err.response && err.response.status === 400) {
+        alert("You've already sent a message request to this user. Please wait for them to accept.");
+      } else {
+        console.error("Error sending message:", err);
+      }
     }
   };
 
@@ -185,7 +209,7 @@ const MessagesPage: React.FC = () => {
     groupedMessages[date].push(message);
   });
 
-  // If no recipient is selected, show the message list
+  // If no recipient is selected, show the message list or requests
   if (!recipient) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -196,10 +220,34 @@ const MessagesPage: React.FC = () => {
               <div className="flex items-center">
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">Messages</h1>
               </div>
+              
+              {/* Tabs */}
+              <div className="mt-4 flex border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setActiveTab("messages")}
+                  className={`py-2 px-4 text-sm font-medium border-b-2 ${
+                    activeTab === "messages"
+                      ? "border-primary text-primary dark:text-primary-light"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                  }`}
+                >
+                  Messages
+                </button>
+                <button
+                  onClick={() => setActiveTab("requests")}
+                  className={`py-2 px-4 text-sm font-medium border-b-2 ${
+                    activeTab === "requests"
+                      ? "border-primary text-primary dark:text-primary-light"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                  }`}
+                >
+                  Requests
+                </button>
+              </div>
             </div>
             
-            {/* Message List */}
-            <MessageList />
+            {/* Content */}
+            {activeTab === "messages" ? <MessageList /> : <MessageRequests />}
           </div>
         </div>
       </div>

@@ -27,6 +27,8 @@ import PricingPage from "./pages/Pricing";
 import PrivacyPage from "./pages/Privacy";
 import TermsPage from "./pages/Terms";
 import CookiesPage from "./pages/Cookies";
+import ForBrandsPage from "./pages/ForBrands";
+import ForInfluencersPage from "./pages/ForInfluencers";
 
 function App() {
   return (
@@ -56,6 +58,8 @@ function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/cookies" element={<CookiesPage />} />
+          <Route path="/brands" element={<ForBrandsPage />} />
+          <Route path="/influencers" element={<ForInfluencersPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </MainLayout>

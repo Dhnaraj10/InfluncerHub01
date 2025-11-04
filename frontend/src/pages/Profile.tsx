@@ -49,35 +49,17 @@ const Profile: React.FC = () => {
 
   const [categoryInput, setCategoryInput] = useState("");
   const [tagInput, setTagInput] = useState("");
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [initialProfileData, setInitialProfileData] = useState<ProfileFormValues | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
+  const [initialProfileData, setInitialProfileData] = useState<ProfileFormValues | null>(null);
 
-  // Lightbox state for portfolio
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const closeImage = () => setSelectedIndex(null);
-  const prevImage = () => {
-    const portfolio = getValues("portfolio") || [];
-    if (selectedIndex !== null && portfolio.length > 0) {
-      setSelectedIndex((selectedIndex - 1 + portfolio.length) % portfolio.length);
-    }
-  };
-  const nextImage = () => {
-    const portfolio = getValues("portfolio") || [];
-    if (selectedIndex !== null && portfolio.length > 0) {
-      setSelectedIndex((selectedIndex + 1) % portfolio.length);
-    }
-  };
+  // Format currency
+  const currencySymbol = () => "₹";
 
-  // Helper to format price with currency
-  const currencySymbol = () => {
-    return "₹"; // Always INR
-  };
-  const formatPrice = (value?: number) => {
-    if (value === undefined || value === null) return null;
-    // show integer or two decimals if fractional
+  const formatCurrency = (value?: number) => {
+    if (value === undefined || value === null) return "N/A";
     const v = Number(value);
     const formatted = Number.isInteger(v) ? v.toString() : v.toFixed(2);
     return `${currencySymbol()}${formatted}`;
@@ -151,25 +133,27 @@ const Profile: React.FC = () => {
 
   // Handle avatar upload
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setUploading(true);
-    const formData = new FormData();
-    formData.append("image", file);
+    const file = files[0];
 
     try {
+      const formData = new FormData();
+      formData.append("image", file);
+
       const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.msg || `Failed to upload avatar: ${res.status} ${res.statusText}`);
       }
-      
+
       const data = await res.json();
       setValue("avatarUrl", data.url);
       setAvatarPreview(data.url);
@@ -190,9 +174,9 @@ const Profile: React.FC = () => {
     if (!files || files.length === 0) return;
 
     setUploading(true);
-    const urls: string[] = [];
 
     try {
+      const urls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const formData = new FormData();
         formData.append("image", files[i]);
@@ -271,21 +255,10 @@ const Profile: React.FC = () => {
   // Handle form submission
   const onSubmit = async (data: ProfileFormValues) => {
     try {
-      // Prepare social links object
-      const socialLinks = {
-        instagram: data.instagram,
-        youtube: data.youtube,
-        twitter: data.twitter,
-        tiktok: data.tiktok,
-        other: data.other,
-      };
-
-      // Remove individual social fields from data
-      const { instagram, youtube, twitter, tiktok, other, ...rest } = data;
-
+      // Send social links as individual fields (not nested) to match backend expectations
       const profileData = {
-        ...rest,
-        socialLinks,
+        ...data,
+        // No need to restructure - send data as-is since social links are already individual fields
       };
 
       const url = profileExists
@@ -349,25 +322,13 @@ const Profile: React.FC = () => {
       });
       setAvatarPreview(null);
       setIsEditMode(true);
-      setProfileExists(false);
     } catch (err: any) {
       toast.error(err.message || "Could not delete profile");
     }
   };
 
-  // Render a profile value if it exists
-  const renderProfileValue = (label: string, value: any) => {
-    if (!value) return null;
-    return (
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{label}</label>
-        <div className="mt-1">{value}</div>
-      </div>
-    );
-  };
-
-  // Format follower count
-  const formatFollowerCount = (count: number) => {
+  // Format followers count
+  const formatFollowers = (count: number) => {
     if (count >= 1000000) {
       return `${(count / 1000000).toFixed(1)}M`;
     }
@@ -378,495 +339,639 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Influencer Profile</h1>
-          {!isEditMode && (
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setIsEditMode(true)}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
-              >
-                Edit Profile
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-              >
-                Delete Profile
-              </button>
-            </div>
-          )}
-        </div>
-
-        {isEditMode ? (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Avatar Upload */}
-            <div className="flex items-center space-x-6">
+    <div className="min-h-screen bg-gradient-to-b from-background-light to-white dark:from-gray-900 dark:to-gray-900 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="relative h-48 bg-gradient-to-r from-primary to-secondary">
+            <div className="absolute inset-0 bg-black/20"></div>
+            <div className="absolute -bottom-16 left-8">
               <div className="relative">
-                <img
-                  src={avatarPreview || "https://placehold.co/150"}
-                  alt="Profile"
-                  className="w-24 h-24 rounded-full object-cover border-2 border-gray-300"
-                />
-                <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-white rounded-full p-2 cursor-pointer">
-                  +
-                </label>
-                <input id="avatar-upload" type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+                {avatarPreview ? (
+                  <img 
+                    src={avatarPreview} 
+                    alt="Avatar" 
+                    className="w-32 h-32 rounded-full border-4 border-white object-cover bg-white"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "https://placehold.co/100";
+                    }}
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center border-4 border-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                )}
+                {isEditMode && (
+                  <label className="absolute bottom-2 right-2 bg-primary text-white rounded-full p-2 cursor-pointer hover:bg-primary-dark transition">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleAvatarUpload}
+                      disabled={uploading}
+                    />
+                    {uploading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    )}
+                  </label>
+                )}
               </div>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="pt-20 px-8 pb-8">
+            {!isEditMode ? (
+              // View Mode
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Profile Picture</h2>
-                <p className="text-gray-600 dark:text-gray-400">Upload a clear photo of yourself</p>
-              </div>
-            </div>
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{user?.name}</h1>
+                    <p className="text-gray-600 dark:text-gray-300">@{getValues("handle") || "handle"}</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsEditMode(true)}
+                    className="btn-primary px-6 py-2 rounded-lg font-medium"
+                  >
+                    Edit Profile
+                  </button>
+                </div>
 
-            {/* Handle */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Handle *</label>
-              <input {...register("handle", { required: "Handle is required" })} className="input" />
-              {errors.handle && <p className="text-red-500 text-sm mt-1">{errors.handle.message}</p>}
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="md:col-span-2">
+                    {/* Bio */}
+                    <div className="mb-6">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">About</h2>
+                      <p className="text-gray-600 dark:text-gray-300">
+                        {getValues("bio") || "No bio provided."}
+                      </p>
+                    </div>
 
-            {/* Bio */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Bio</label>
-              <textarea {...register("bio")} rows={3} className="input" />
-            </div>
-
-            {/* Categories */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categories</label>
-              <div className="flex flex-wrap items-center w-full px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50/70 dark:bg-gray-700/70">
-                <Controller
-                  name="categories"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      {field.value?.map((category, index) => (
-                        <div key={index} className="flex items-center bg-primary/20 text-primary-dark dark:text-primary-light text-sm font-medium mr-2 mb-1 px-2 py-1 rounded-full">
-                          <span>{category}</span>
-                          <button type="button" onClick={() => removeCategory(category)} className="ml-2 text-red-500 hover:text-red-700">&times;</button>
-                        </div>
-                      ))}
-                      <div className="flex-grow flex items-center">
-                        <input
-                          type="text"
-                          value={categoryInput}
-                          onChange={(e) => setCategoryInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCategory(); } }}
-                          className="flex-grow bg-transparent outline-none"
-                          placeholder="Add categories..."
-                        />
-                        <button type="button" onClick={addCategory} className="btn-primary text-sm py-1 ml-2">Add</button>
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-primary">{formatFollowers(getValues("followerCount") || 0)}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Followers</div>
                       </div>
-                    </>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Follower Count</label>
-                <input
-                  type="number"
-                  {...register("followerCount", { valueAsNumber: true, min: 0 })}
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Avg. Engagement Rate (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register("averageEngagementRate", { valueAsNumber: true, min: 0 })}
-                  className="input"
-                />
-              </div>
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaMapMarkerAlt className="text-gray-400" />
-                </div>
-                <input
-                  {...register("location")}
-                  className="input pl-10"
-                  placeholder="City, Country"
-                />
-              </div>
-            </div>
-
-            {/* Social links */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Social Links</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input {...register("instagram")} placeholder="Instagram URL" className="input" />
-                <input {...register("youtube")} placeholder="YouTube URL" className="input" />
-                <input {...register("twitter")} placeholder="Twitter URL" className="input" />
-                <input {...register("tiktok")} placeholder="TikTok URL" className="input" />
-                <input {...register("other")} placeholder="Other Link" className="input" />
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
-              <div className="flex flex-wrap items-center w-full px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50/70 dark:bg-gray-700/70">
-                <Controller
-                  name="tags"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      {field.value?.map((tag, index) => (
-                        <div key={index} className="flex items-center bg-primary/20 text-primary-dark dark:text-primary-light text-sm font-medium mr-2 mb-1 px-2 py-1 rounded-full">
-                          <span>{tag}</span>
-                          <button type="button" onClick={() => removeTag(tag)} className="ml-2 text-red-500 hover:text-red-700">&times;</button>
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-accent">
+                          {getValues("averageEngagementRate") ? getValues("averageEngagementRate")?.toFixed(1) : "0"}%
                         </div>
-                      ))}
-                      <div className="flex-grow flex items-center">
-                        <input
-                          type="text"
-                          value={tagInput}
-                          onChange={(e) => setTagInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-                          className="flex-grow bg-transparent outline-none"
-                          placeholder="Add tags..."
-                        />
-                        <button type="button" onClick={addTag} className="btn-primary text-sm py-1 ml-2">Add</button>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Engagement</div>
                       </div>
-                    </>
-                  )}
-                />
-              </div>
-            </div>
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-primary">
+                          {getValues("location") || "N/A"}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Location</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-accent">
+                          {getValues("categories")?.length || 0}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Categories</div>
+                      </div>
+                    </div>
 
-            {/* Pricing */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pricing (INR)</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Post</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                      ₹
-                    </div>
-                    <input
-                      type="number"
-                      {...register("pricing.post", { valueAsNumber: true, min: 0 })}
-                      className="input pl-8"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Reel</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                      ₹
-                    </div>
-                    <input
-                      type="number"
-                      {...register("pricing.reel", { valueAsNumber: true, min: 0 })}
-                      className="input pl-8"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Story</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                      ₹
-                    </div>
-                    <input
-                      type="number"
-                      {...register("pricing.story", { valueAsNumber: true, min: 0 })}
-                      className="input pl-8"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+                    {/* Categories */}
+                    {getValues("categories") && getValues("categories")!.length > 0 && (
+                      <div className="mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Categories</h2>
+                        <div className="flex flex-wrap gap-2">
+                          {getValues("categories")!.map((category, i) => (
+                            <span
+                              key={i}
+                              className="px-3 py-1 bg-primary/20 text-primary dark:text-primary-light rounded-full text-sm"
+                            >
+                              {category}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-            {/* Portfolio Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Portfolio</label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-                <input type="file" multiple accept="image/*" className="hidden" id="portfolio-upload" onChange={handlePortfolioUpload} />
-                <label htmlFor="portfolio-upload" className="cursor-pointer">
-                  <div className="flex flex-col items-center justify-center py-8">
-                    <FaLink className="text-4xl text-gray-400 mb-2" />
-                    <p className="text-gray-600 dark:text-gray-400">Click to upload portfolio images</p>
-                    <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">PNG, JPG up to 10MB</p>
+                    {/* Social Links */}
+                    {(getValues("instagram") || getValues("youtube") || getValues("twitter") || getValues("tiktok") || getValues("other")) && (
+                      <div className="mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Social Media</h2>
+                        <div className="flex flex-wrap gap-3">
+                          {getValues("instagram") && (
+                            <a 
+                              href={getValues("instagram")} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition"
+                            >
+                              <FaInstagram className="h-5 w-5" />
+                              <span>Instagram</span>
+                            </a>
+                          )}
+                          {getValues("youtube") && (
+                            <a 
+                              href={getValues("youtube")} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                            >
+                              <FaYoutube className="h-5 w-5" />
+                              <span>YouTube</span>
+                            </a>
+                          )}
+                          {getValues("twitter") && (
+                            <a 
+                              href={getValues("twitter")} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition"
+                            >
+                              <FaTwitter className="h-5 w-5" />
+                              <span>Twitter</span>
+                            </a>
+                          )}
+                          {getValues("tiktok") && (
+                            <a 
+                              href={getValues("tiktok")} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition"
+                            >
+                              <FaTiktok className="h-5 w-5" />
+                              <span>TikTok</span>
+                            </a>
+                          )}
+                          {getValues("other") && (
+                            <a 
+                              href={getValues("other")} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition"
+                            >
+                              <FaLink className="h-5 w-5" />
+                              <span>Website</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Portfolio */}
+                    {getValues("portfolio") && getValues("portfolio")!.length > 0 && (
+                      <div className="mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Portfolio</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          {getValues("portfolio")!.map((image, index) => (
+                            <div key={index} className="aspect-square rounded-lg overflow-hidden">
+                              <img 
+                                src={image} 
+                                alt={`Portfolio ${index + 1}`} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = "https://placehold.co/300";
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tags */}
+                    {getValues("tags") && getValues("tags")!.length > 0 && (
+                      <div className="mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Tags</h2>
+                        <div className="flex flex-wrap gap-2">
+                          {getValues("tags")!.map((tag, i) => (
+                            <span
+                              key={i}
+                              className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </label>
+
+                  <div>
+                    {/* Pricing */}
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 mb-6">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Pricing (INR)</h2>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-300">Post</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {formatCurrency(getValues("pricing")?.post)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-300">Reel</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {formatCurrency(getValues("pricing")?.reel)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-300">Story</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {formatCurrency(getValues("pricing")?.story)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-3">
+                      <button 
+                        onClick={() => setIsEditMode(true)}
+                        className="btn-primary py-3 rounded-lg font-medium"
+                      >
+                        Edit Profile
+                      </button>
+                      <button 
+                        onClick={handleDelete}
+                        className="bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition"
+                      >
+                        Delete Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              {uploading && <p className="text-gray-500 dark:text-gray-400 mt-2">Uploading...</p>}
-              
-              {/* Portfolio Preview */}
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {(getValues("portfolio") || []).map((url, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={url}
-                      alt={`Portfolio ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                    <button
+            ) : (
+              // Edit Mode
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{user?.name}</h1>
+                    <p className="text-gray-600 dark:text-gray-300">Edit your profile</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
                       type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={handleCancel}
+                      className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                     >
-                      &times;
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="btn-primary px-6 py-2 rounded-lg font-medium"
+                    >
+                      Save Profile
                     </button>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Form buttons */}
-            <div className="flex justify-end gap-4">
-              <button type="button" onClick={handleCancel} className="btn-outline">Cancel</button>
-              <button type="submit" className="btn-primary">Save Profile</button>
-            </div>
-          </form>
-        ) : (
-          <div className="space-y-6">
-            {/* Profile Header */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div className="flex items-center space-x-4">
-                  <img
-                    src={getValues("avatarUrl") || "https://placehold.co/150"}
-                    alt="Profile"
-                    className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
-                  />
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">@{getValues("handle")}</h1>
-                    <p className="text-gray-600 dark:text-gray-300">{getValues("bio")}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {formatFollowerCount(getValues("followerCount") || 0)}
-                    </div>
-                    <div className="text-gray-600 dark:text-gray-400">Followers</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {getValues("averageEngagementRate") ? `${getValues("averageEngagementRate")}%` : "N/A"}
-                    </div>
-                    <div className="text-gray-600 dark:text-gray-400">Engagement</div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Location */}
-              {getValues("location") && (
-                <div className="mt-4 flex items-center text-gray-600 dark:text-gray-400">
-                  <FaMapMarkerAlt className="mr-2" />
-                  <span>{getValues("location")}</span>
-                </div>
-              )}
-              
-              {/* Categories */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {(getValues("categories") || []).map((categoryId, index) => {
-                  // Try to find the category name from the initial data or use the categoryId as fallback
-                  let categoryName = categoryId;
-                  if (initialProfileData?.categories) {
-                    // Find category by matching the ID
-                    const matchedCategory: any = initialProfileData.categories.find((cat: any) => {
-                      // If cat is an object with _id, compare with that
-                      if (typeof cat === 'object' && cat._id) {
-                        return cat._id === categoryId;
-                      }
-                      // If cat is just an ID string, compare directly
-                      return cat === categoryId;
-                    });
-                    
-                    // If we found a match and it's an object, use its name, otherwise use the categoryId
-                    if (matchedCategory) {
-                      categoryName = typeof matchedCategory === 'object' ? (matchedCategory.name || matchedCategory._id) : matchedCategory;
-                    }
-                  }
-                  return (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                    >
-                      {categoryName}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left column - Main content */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Social Links */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Social Media</h3>
-                  <div className="flex flex-wrap gap-4">
-                    {getValues("instagram") && (
-                      <a href={getValues("instagram")} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center space-x-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition">
-                        <FaInstagram size={20} />
-                        <span>Instagram</span>
-                      </a>
-                    )}
-                    {getValues("youtube") && (
-                      <a href={getValues("youtube")} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center space-x-2 bg-gradient-to-r from-red-500 to-red-700 text-white px-4 py-2 rounded-lg hover:opacity-90 transition">
-                        <FaYoutube size={20} />
-                        <span>YouTube</span>
-                      </a>
-                    )}
-                    {getValues("twitter") && (
-                      <a href={getValues("twitter")} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center space-x-2 bg-gradient-to-r from-blue-400 to-blue-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition">
-                        <FaTwitter size={20} />
-                        <span>Twitter</span>
-                      </a>
-                    )}
-                    {getValues("tiktok") && (
-                      <a href={getValues("tiktok")} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center space-x-2 bg-gradient-to-r from-black to-gray-800 text-white px-4 py-2 rounded-lg hover:opacity-90 transition">
-                        <FaTiktok size={20} />
-                        <span>TikTok</span>
-                      </a>
-                    )}
-                    {getValues("other") && (
-                      <a href={getValues("other")} target="_blank" rel="noopener noreferrer" 
-                         className="flex items-center space-x-2 bg-gradient-to-r from-gray-500 to-gray-700 text-white px-4 py-2 rounded-lg hover:opacity-90 transition">
-                        <FaLink size={20} />
-                        <span>Website</span>
-                      </a>
-                    )}
-                  </div>
                 </div>
 
-                {/* Portfolio */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Portfolio</h3>
-                  {(getValues("portfolio") || []).length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {(getValues("portfolio") || []).map((url, index) => (
-                        <div 
-                          key={index} 
-                          className="relative cursor-pointer group"
-                          onClick={() => setSelectedIndex(index)}
-                        >
-                          <img
-                            src={url}
-                            alt={`Portfolio ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg"
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="md:col-span-2 space-y-6">
+                    {/* Basic Info */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Handle *</label>
+                        <input 
+                          {...register("handle", { required: "Handle is required" })} 
+                          placeholder="Your handle" 
+                          className="input"
+                        />
+                        {errors.handle && <p className="text-red-500 text-sm mt-1">{errors.handle.message}</p>}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Location</label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                            <FaMapMarkerAlt className="h-5 w-5" />
+                          </div>
+                          <input 
+                            {...register("location")} 
+                            placeholder="City, Country" 
+                            className="input pl-10"
                           />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-lg flex items-center justify-center">
-                            <span className="opacity-0 group-hover:opacity-100 text-white font-bold">View</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bio */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bio</label>
+                      <textarea 
+                        {...register("bio")} 
+                        placeholder="Tell us about yourself..." 
+                        rows={4}
+                        className="input"
+                      />
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Follower Count</label>
+                        <input 
+                          type="number" 
+                          {...register("followerCount", { valueAsNumber: true, min: 0 })} 
+                          placeholder="0" 
+                          className="input"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Engagement Rate (%)</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          {...register("averageEngagementRate", { valueAsNumber: true, min: 0, max: 100 })} 
+                          placeholder="0" 
+                          className="input"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categories</label>
+                        <div className="flex">
+                          <input
+                            type="text"
+                            value={categoryInput}
+                            onChange={(e) => setCategoryInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCategory(); } }}
+                            className="input flex-grow rounded-r-none"
+                            placeholder="Add categories..."
+                          />
+                          <button type="button" onClick={addCategory} className="btn-primary rounded-l-none px-4">Add</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Categories List */}
+                    <Controller
+                      name="categories"
+                      control={control}
+                      render={({ field }) => (
+                        <div className="flex flex-wrap gap-2">
+                          {field.value?.map((category, index) => (
+                            <div key={index} className="flex items-center bg-primary/20 text-primary-dark dark:text-primary-light text-sm font-medium px-3 py-1 rounded-full">
+                              <span>{category}</span>
+                              <button type="button" onClick={() => removeCategory(category)} className="ml-2 text-red-500 hover:text-red-700">&times;</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    />
+
+                    {/* Social links */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Social Links</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input {...register("instagram")} placeholder="Instagram URL" className="input" />
+                        <input {...register("youtube")} placeholder="YouTube URL" className="input" />
+                        <input {...register("twitter")} placeholder="Twitter URL" className="input" />
+                        <input {...register("tiktok")} placeholder="TikTok URL" className="input" />
+                        <input {...register("other")} placeholder="Other Link" className="input" />
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
+                      <div className="flex flex-wrap items-center w-full px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50/70 dark:bg-gray-700/70">
+                        <Controller
+                          name="tags"
+                          control={control}
+                          render={({ field }) => (
+                            <>
+                              {field.value?.map((tag, index) => (
+                                <div key={index} className="flex items-center bg-primary/20 text-primary-dark dark:text-primary-light text-sm font-medium mr-2 mb-1 px-2 py-1 rounded-full">
+                                  <span>{tag}</span>
+                                  <button type="button" onClick={() => removeTag(tag)} className="ml-2 text-red-500 hover:text-red-700">&times;</button>
+                                </div>
+                              ))}
+                              <div className="flex-grow flex items-center">
+                                <input
+                                  type="text"
+                                  value={tagInput}
+                                  onChange={(e) => setTagInput(e.target.value)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+                                  className="flex-grow bg-transparent outline-none"
+                                  placeholder="Add tags..."
+                                />
+                                <button type="button" onClick={addTag} className="btn-primary text-sm py-1 ml-2">Add</button>
+                              </div>
+                            </>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pricing */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pricing (INR)</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Post</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                              ₹
+                            </div>
+                            <input
+                              type="number"
+                              {...register("pricing.post", { valueAsNumber: true, min: 0 })}
+                              className="input pl-8"
+                              placeholder="0"
+                            />
                           </div>
                         </div>
-                      ))}
+                        <div>
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Reel</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                              ₹
+                            </div>
+                            <input
+                              type="number"
+                              {...register("pricing.reel", { valueAsNumber: true, min: 0 })}
+                              className="input pl-8"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Story</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                              ₹
+                            </div>
+                            <input
+                              type="number"
+                              {...register("pricing.story", { valueAsNumber: true, min: 0 })}
+                              className="input pl-8"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400">No portfolio items added yet.</p>
-                  )}
-                </div>
-              </div>
 
-              {/* Right column - Additional info */}
-              <div className="space-y-6">
-                {/* Pricing */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pricing (INR)</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
-                      <span className="text-gray-600 dark:text-gray-300">Post</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {getValues("pricing")?.post !== undefined ? formatPrice(getValues("pricing")?.post) : <span className="text-gray-400">Not set</span>}
-                      </span>
+                    {/* Portfolio Upload */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Portfolio</label>
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          multiple 
+                          className="hidden" 
+                          id="portfolio-upload" 
+                          onChange={handlePortfolioUpload}
+                          disabled={uploading}
+                        />
+                        <label htmlFor="portfolio-upload" className="cursor-pointer">
+                          {uploading ? (
+                            <div className="flex flex-col items-center">
+                              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-2"></div>
+                              <p className="text-gray-600 dark:text-gray-300">Uploading...</p>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="mx-auto bg-gray-200 dark:bg-gray-700 rounded-full p-3 w-12 h-12 flex items-center justify-center mb-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                              </div>
+                              <p className="text-gray-600 dark:text-gray-300">
+                                <span className="text-primary font-medium">Click to upload</span> or drag and drop
+                              </p>
+                              <p className="text-gray-500 text-sm mt-1">PNG, JPG, GIF up to 10MB</p>
+                            </>
+                          )}
+                        </label>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
-                      <span className="text-gray-600 dark:text-gray-300">Reel</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {getValues("pricing")?.reel !== undefined ? formatPrice(getValues("pricing")?.reel) : <span className="text-gray-400">Not set</span>}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600 dark:text-gray-300">Story</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {getValues("pricing")?.story !== undefined ? formatPrice(getValues("pricing")?.story) : <span className="text-gray-400">Not set</span>}
-                      </span>
+
+                    {/* Portfolio Preview */}
+                    <Controller
+                      name="portfolio"
+                      control={control}
+                      render={({ field }) => (
+                        <>
+                          {field.value && field.value.length > 0 && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                              {field.value.map((image, index) => (
+                                <div key={index} className="relative group aspect-square rounded-lg overflow-hidden">
+                                  <img 
+                                    src={image} 
+                                    alt={`Portfolio ${index + 1}`} 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = "https://placehold.co/300";
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeImage(index)}
+                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 sticky top-8">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Preview</h2>
+                      
+                      <div className="mb-4">
+                        <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Avatar</h3>
+                        {avatarPreview ? (
+                          <img 
+                            src={avatarPreview} 
+                            alt="Avatar Preview" 
+                            className="w-24 h-24 rounded-full object-cover mx-auto bg-white"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "https://placehold.co/100";
+                            }}
+                          />
+                        ) : (
+                          <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-600 mx-auto flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                        )}
+                        <div className="mt-2 text-center">
+                          <label className="text-sm text-primary hover:underline cursor-pointer">
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={handleAvatarUpload}
+                              disabled={uploading}
+                            />
+                            Change Photo
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">Handle</h3>
+                          <p className="text-gray-900 dark:text-white">@{getValues("handle") || "handle"}</p>
+                        </div>
+                        
+                        <div>
+                          <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">Bio</h3>
+                          <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3">
+                            {getValues("bio") || "No bio provided."}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">Location</h3>
+                          <p className="text-gray-900 dark:text-white">
+                            {getValues("location") || "Not specified"}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">Categories</h3>
+                          <div className="flex flex-wrap gap-1">
+                            {getValues("categories")?.slice(0, 3).map((category, i) => (
+                              <span key={i} className="text-xs px-2 py-1 bg-primary/20 text-primary dark:text-primary-light rounded-full">
+                                {category}
+                              </span>
+                            ))}
+                            {getValues("categories") && getValues("categories")!.length > 3 && (
+                              <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full">
+                                +{getValues("categories")!.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Tags */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tags</h3>
-                  {(getValues("tags") || []).length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {(getValues("tags") || []).map((tag, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400">No tags added yet.</p>
-                  )}
-                </div>
-              </div>
-            </div>
+              </form>
+            )}
           </div>
-        )}
-
-        {/* Lightbox for portfolio images */}
-        {selectedIndex !== null && (getValues("portfolio") || []).length > 0 && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4" onClick={closeImage}>
-            <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="absolute top-4 right-4 text-white text-3xl z-10"
-                onClick={closeImage}
-              >
-                &times;
-              </button>
-              <button
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10"
-                onClick={(e) => { e.stopPropagation(); prevImage(); }}
-              >
-                &lsaquo;
-              </button>
-              <button
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-2xl z-10"
-                onClick={(e) => { e.stopPropagation(); nextImage(); }}
-              >
-                &rsaquo;
-              </button>
-              <img
-                src={(getValues("portfolio") || [])[selectedIndex]}
-                alt={`Portfolio ${selectedIndex + 1}`}
-                className="max-h-[90vh] max-w-full object-contain"
-              />
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm">
-                {selectedIndex + 1} / {(getValues("portfolio") || []).length}
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -50,7 +50,14 @@ router.get("/", auth, async (req, res) => {
     .populate('sender', 'name')
     .populate('recipient', 'name');
     
-    res.json(userMessages);
+    // Format messages for frontend
+    const formattedMessages = userMessages.map(msg => ({
+      ...msg.toObject(),
+      senderName: msg.sender.name,
+      recipientName: msg.recipient.name
+    }));
+    
+    res.json(formattedMessages);
   } catch (err) {
     console.error("Error fetching messages:", err);
     res.status(500).json({ error: "Failed to fetch messages" });
@@ -94,13 +101,12 @@ router.get("/conversations", auth, async (req, res) => {
         conversations[partnerId] = {
           id: partnerId,
           userId: partnerId,
-          userName: partnerName || "Unknown User",
+          userName: partnerName,
           lastMessage: message.content,
           timestamp: message.timestamp,
-          unreadCount: message.recipient && message.recipient.toString() === req.user.id && !message.status ? 
-            (conversations[partnerId] ? conversations[partnerId].unreadCount + 1 : 1) : 0
+          unreadCount: message.recipient?.toString() === req.user.id && !message.status ? 1 : 0
         };
-      } else if (message.recipient && message.recipient.toString() === req.user.id && !message.status) {
+      } else if (message.recipient?.toString() === req.user.id && !message.status) {
         // Increment unread count for received messages
         conversations[partnerId].unreadCount += 1;
       }
@@ -213,6 +219,11 @@ router.post("/requests/:requestId/accept", auth, async (req, res) => {
   try {
     const { requestId } = req.params;
     
+    // Validate request ID
+    if (!requestId || requestId === 'undefined') {
+      return res.status(400).json({ error: "Valid request ID is required" });
+    }
+    
     const request = await MessageRequest.findOne({
       _id: requestId,
       to: req.user.id,
@@ -237,16 +248,16 @@ router.post("/requests/:requestId/accept", auth, async (req, res) => {
     
     if (!existingConnection) {
       const connection = new UserConnection({
-        user1: request.from,
-        user2: request.to
+        user1: request.from.toString(), // Ensure it's a string ID
+        user2: request.to.toString()     // Ensure it's a string ID
       });
       await connection.save();
     }
     
     // Create the first message from the request
     const message = new Message({
-      sender: request.from,
-      recipient: request.to,
+      sender: request.from.toString(),    // Ensure it's a string ID
+      recipient: request.to.toString(),   // Ensure it's a string ID
       content: request.content
     });
     
@@ -254,10 +265,15 @@ router.post("/requests/:requestId/accept", auth, async (req, res) => {
     
     // Populate sender info for response
     await message.populate('sender', 'name');
+    await message.populate('recipient', 'name');
     
     res.json({ 
       message: "Message request accepted", 
-      firstMessage: message.toObject()
+      firstMessage: {
+        ...message.toObject(),
+        senderName: message.sender.name,
+        recipientName: message.recipient.name
+      }
     });
   } catch (err) {
     console.error("Error accepting message request:", err);

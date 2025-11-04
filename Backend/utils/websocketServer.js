@@ -82,7 +82,7 @@ export const initializeWebSocketServer = (server) => {
             message.data = { 
               ...message.data, 
               ...dbMessage.toObject(),
-              senderId: dbMessage.sender._id,
+              senderId: dbMessage.sender._id.toString(), // Convert ObjectId to string
               status: dbMessage.status
             };
           } catch (err) {
@@ -119,9 +119,14 @@ export const initializeWebSocketServer = (server) => {
             }
           }
           
-          // Always send back to sender with full message data
-          if (ws.readyState === ws.OPEN && message.data._id) {
-            ws.send(JSON.stringify(message));
+          // Always send back to sender for confirmation
+          if (ws.readyState === ws.OPEN) {
+            // Make sure we're sending the correct format
+            const responseMessage = {
+              type: 'message',
+              data: message.data
+            };
+            ws.send(JSON.stringify(responseMessage));
           }
           
           // Handle read status if recipient is the one sending

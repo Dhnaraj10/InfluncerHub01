@@ -45,7 +45,10 @@ router.get("/", auth, async (req, res) => {
         { sender: req.user.id, recipient: recipient },
         { sender: recipient, recipient: req.user.id }
       ]
-    }).sort({ timestamp: 1 });
+    })
+    .sort({ timestamp: 1 })
+    .populate('sender', 'name')
+    .populate('recipient', 'name');
     
     res.json(userMessages);
   } catch (err) {
@@ -139,8 +142,16 @@ router.post("/", auth, async (req, res) => {
     });
     
     // Check if there's a sponsorship relationship
-    // This would need to be implemented based on your sponsorship model
-    const hasSponsorship = false; // Placeholder - implement real sponsorship check
+    const Sponsorship = (await import('../models/Sponsorship.js')).default;
+    const sponsorship = await Sponsorship.findOne({
+      $or: [
+        { brand: req.user.id, influencer: recipientId },
+        { brand: recipientId, influencer: req.user.id }
+      ],
+      status: { $in: ['accepted', 'pending'] } // Only active sponsorships
+    });
+    
+    const hasSponsorship = !!sponsorship;
     
     if (!connection && !hasSponsorship) {
       // If no connection and no sponsorship, create a message request instead

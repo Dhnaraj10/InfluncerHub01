@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../useAuth";
 import axios from "axios";
 import websocketService from "../services/websocket";
+import { useNavigate } from "react-router-dom";
 
 interface MessageRequest {
   id: string;
@@ -18,6 +19,7 @@ const MessageRequests: React.FC = () => {
   const { user, token } = useAuth();
   const [requests, setRequests] = useState<MessageRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadRequests();
@@ -62,7 +64,7 @@ const MessageRequests: React.FC = () => {
     if (!token) return;
     
     try {
-      await axios.post(
+      const res = await axios.post(
         `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages/requests/${requestId}/accept`,
         {},
         {
@@ -78,8 +80,17 @@ const MessageRequests: React.FC = () => {
         type: 'requestAccepted',
         data: { requestId, fromUserId }
       });
+      
+      // Redirect to messages with the newly connected user
+      if (res.data.firstMessage) {
+        const message = res.data.firstMessage;
+        const otherUserId = message.sender._id === user?._id ? message.recipient : message.sender._id;
+        const otherUserName = message.sender._id === user?._id ? message.recipientName : message.sender.name;
+        navigate(`/messages?recipient=${otherUserId}&name=${encodeURIComponent(otherUserName || 'Unknown User')}`);
+      }
     } catch (err) {
       console.error("Error accepting message request:", err);
+      alert("Failed to accept message request. Please try again.");
     }
   };
 
@@ -99,6 +110,7 @@ const MessageRequests: React.FC = () => {
       setRequests(prev => prev.filter(req => req.id !== requestId));
     } catch (err) {
       console.error("Error rejecting message request:", err);
+      alert("Failed to reject message request. Please try again.");
     }
   };
 

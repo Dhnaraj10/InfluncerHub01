@@ -169,6 +169,11 @@ const BrandProfile: React.FC = () => {
       setProfileExists(true);
       setIsEditMode(false);
       toast.success("Profile saved successfully");
+      
+      // Navigate to the public brand profile page after saving
+      if (user?._id) {
+        navigate(`/brand/${user._id}`);
+      }
     } catch (err: any) {
       console.error('Profile save error:', err);
       toast.error(err.message || "Failed to save profile");

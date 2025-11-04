@@ -25,9 +25,8 @@ const MessageRequests: React.FC = () => {
     // Listen for new message requests
     const handleWebSocketMessage = (message: any) => {
       if (message.type === 'messageRequest') {
-        // In a real app, you would add the new request to the list
-        // For now, we'll just reload all requests
-        loadRequests();
+        // Add new request to the list
+        setRequests(prev => [...prev, message.data]);
       }
     };
     

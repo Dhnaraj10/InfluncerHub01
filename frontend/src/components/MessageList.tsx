@@ -24,17 +24,16 @@ const MessageList: React.FC = () => {
     // Load initial conversations
     loadConversations();
     
-    // Setup WebSocket connection and message listener
-    if (token) {
-      websocketService.connect(token);
-    }
-    
+    // Listen for new messages
     const handleNewMessage = (message: any) => {
       if (message.type === 'message' && message.data) {
         // Update conversations with new message
         setConversations(prev => {
           const updated = [...prev];
-          const convIndex = updated.findIndex(c => c.userId === message.data.senderId);
+          const convIndex = updated.findIndex(c => 
+            (c.userId === message.data.senderId && message.data.recipientId === user?._id) ||
+            (c.userId === message.data.recipientId && message.data.senderId === user?._id)
+          );
           
           if (convIndex !== -1) {
             // Update existing conversation
@@ -42,17 +41,17 @@ const MessageList: React.FC = () => {
               ...updated[convIndex],
               lastMessage: message.data.content,
               timestamp: message.data.timestamp,
-              unreadCount: updated[convIndex].unreadCount + 1
+              unreadCount: message.data.senderId === user?._id ? 0 : updated[convIndex].unreadCount + 1
             };
           } else {
             // Add new conversation
             updated.unshift({
               id: Date.now().toString(),
-              userId: message.data.senderId,
-              userName: message.data.senderName,
+              userId: message.data.senderId === user?._id ? message.data.recipientId : message.data.senderId,
+              userName: message.data.senderId === user?._id ? "You" : message.data.senderName,
               lastMessage: message.data.content,
               timestamp: message.data.timestamp,
-              unreadCount: 1
+              unreadCount: message.data.senderId === user?._id ? 0 : 1
             });
           }
           
@@ -68,47 +67,26 @@ const MessageList: React.FC = () => {
     
     return () => {
       websocketService.removeMessageListener(handleNewMessage);
-      websocketService.disconnect();
     };
-  }, [token]);
+  }, [token, user]);
 
   const loadConversations = async () => {
     if (!token) return;
     
     try {
       setLoading(true);
-      // In a real app, you would fetch conversations from an API
-      // For now, we'll simulate with sample data
-      const sampleConversations: Conversation[] = [
+      // Fetch real conversations from the backend
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages/conversations`,
         {
-          id: "1",
-          userId: "user1",
-          userName: "Alex Johnson",
-          lastMessage: "Sure, let's schedule a call to discuss the details",
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          unreadCount: 2
-        },
-        {
-          id: "2",
-          userId: "user2",
-          userName: "Sarah Miller",
-          lastMessage: "Thanks for the proposal, I'll review it by tomorrow",
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-          unreadCount: 0
-        },
-        {
-          id: "3",
-          userId: "user3",
-          userName: "TechBrand Inc",
-          lastMessage: "We've approved your collaboration request!",
-          timestamp: new Date(Date.now() - 172800000).toISOString(),
-          unreadCount: 1
+          headers: { Authorization: `Bearer ${token}` }
         }
-      ];
+      );
       
-      setConversations(sampleConversations);
+      setConversations(res.data);
     } catch (err) {
       console.error("Error loading conversations:", err);
+      setConversations([]);
     } finally {
       setLoading(false);
     }

@@ -72,14 +72,18 @@ router.get("/conversations", auth, async (req, res) => {
     const conversations = {};
     
     messages.forEach(message => {
-      // Determine the conversation partner
-      const partnerId = message.sender.toString() === req.user.id ? 
-        message.recipient._id.toString() : 
-        message.sender._id.toString();
-        
-      const partnerName = message.sender.toString() === req.user.id ? 
-        message.recipient.name : 
-        message.sender.name;
+      // Safely get partner ID
+      const partnerId = message.sender && message.sender.toString() === req.user.id ? 
+        (message.recipient && message.recipient.toString()) : 
+        (message.sender && message.sender.toString());
+      
+      // Skip if partnerId is not available
+      if (!partnerId) return;
+      
+      // Safely get partner name
+      const partnerName = message.sender && message.sender.toString() === req.user.id ? 
+        (message.recipient && message.recipient.name) : 
+        (message.sender && message.sender.name);
       
       // If this is the first message in this conversation, or if this message is more recent
       if (!conversations[partnerId] || 
@@ -87,13 +91,13 @@ router.get("/conversations", auth, async (req, res) => {
         conversations[partnerId] = {
           id: partnerId,
           userId: partnerId,
-          userName: partnerName,
+          userName: partnerName || "Unknown User",
           lastMessage: message.content,
           timestamp: message.timestamp,
-          unreadCount: message.recipient.toString() === req.user.id && !message.status ? 
+          unreadCount: message.recipient && message.recipient.toString() === req.user.id && !message.status ? 
             (conversations[partnerId] ? conversations[partnerId].unreadCount + 1 : 1) : 0
         };
-      } else if (message.recipient.toString() === req.user.id && !message.status) {
+      } else if (message.recipient && message.recipient.toString() === req.user.id && !message.status) {
         // Increment unread count for received messages
         conversations[partnerId].unreadCount += 1;
       }

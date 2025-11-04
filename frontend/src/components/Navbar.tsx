@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../useAuth";
+import axios from "axios";
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileOpen, setProfileOpen] = useState(false);
-  const { isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, logout, user, token } = useAuth();
   const location = useLocation();
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -49,19 +50,36 @@ const Navbar: React.FC = () => {
   // 添加状态来存储未读消息数量
   const [unreadMessages, setUnreadMessages] = useState(0);
 
-  // 模拟从API获取未读消息数量
+  // 从API获取未读消息数量
   useEffect(() => {
-    // 在实际应用中，这将是一个API调用
     const fetchUnreadMessages = async () => {
-      // 模拟API延迟
-      setTimeout(() => {
-        // 假设我们获取到了3条未读消息
-        setUnreadMessages(3);
-      }, 500);
+      if (!token) return;
+      
+      try {
+        const res = await axios.get(
+          `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages/conversations`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+        
+        // 计算未读消息总数
+        const totalUnread = res.data.reduce((acc: number, conversation: any) => 
+          acc + (conversation.unreadCount || 0), 0);
+          
+        setUnreadMessages(totalUnread);
+      } catch (err) {
+        console.error("Error fetching unread messages:", err);
+      }
     };
 
     fetchUnreadMessages();
-  }, []);
+    
+    // 每30秒轮询更新
+    const interval = setInterval(fetchUnreadMessages, 30000);
+    
+    return () => clearInterval(interval);
+  }, [token]);
 
   return (
     <nav className="bg-white dark:bg-background-dark shadow-md dark:shadow-gray-800/30">

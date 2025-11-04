@@ -66,20 +66,33 @@ export const initializeWebSocketServer = (server) => {
           message.data.senderId = ws.userId;
           message.data.timestamp = new Date().toISOString();
           
-          // Save message to database
+          // Save message to database with initial status
+          let dbMessage;
           try {
-            const dbMessage = new Message({
+            dbMessage = new Message({
               sender: ws.userId,
               recipient: recipientId,
-              content: content
+              content: content,
+              status: 'sent'  // Default status
             });
             await dbMessage.save();
             
             // Populate sender info
             await dbMessage.populate('sender', 'name');
-            message.data = { ...message.data, ...dbMessage.toObject() };
+            message.data = { 
+              ...message.data, 
+              ...dbMessage.toObject(),
+              senderId: dbMessage.sender._id,
+              status: dbMessage.status
+            };
           } catch (err) {
             console.error("Error saving message to database:", err);
+            // Continue anyway to allow message delivery
+          }
+          
+          // Generate message ID if not present (for updates)
+          if (dbMessage && !message.data._id && dbMessage._id) {
+            message.data._id = dbMessage._id.toString();
           }
           
           // Find recipient WebSocket
@@ -89,11 +102,53 @@ export const initializeWebSocketServer = (server) => {
           if (recipientWs && recipientWs.readyState === recipientWs.OPEN) {
             recipientWs.send(JSON.stringify(message));
             
-            // Update message status to delivered
+            // Update message status to delivered if we have a DB reference
+            if (dbMessage) {
+              try {
+                await Message.findByIdAndUpdate(dbMessage._id, { 
+                  status: 'delivered',
+                  deliveredAt: new Date()
+                });
+                
+                // Update our local message data
+                message.data.status = 'delivered';
+                message.data.deliveredAt = new Date().toISOString();
+              } catch (err) {
+                console.error("Error updating message status to delivered:", err);
+              }
+            }
+          }
+          
+          // Always send back to sender with full message data
+          if (ws.readyState === ws.OPEN && message.data._id) {
+            ws.send(JSON.stringify(message));
+          }
+          
+          // Handle read status if recipient is the one sending
+          if (recipientId === ws.userId && dbMessage) {
             try {
-              await Message.findByIdAndUpdate(message.data.id, { status: 'delivered' });
+              await Message.findByIdAndUpdate(dbMessage._id, { 
+                status: 'read',
+                readAt: new Date()
+              });
+              
+              // Broadcast read status update to all connected clients of the recipient
+              const recipientConnections = Array.from(clients.values()).filter(
+                client => client.userId === recipientId && client.readyState === client.OPEN
+              );
+              
+              recipientConnections.forEach(client => {
+                client.send(JSON.stringify({
+                  type: 'messageStatusUpdate',
+                  data: {
+                    messageId: dbMessage._id,
+                    status: 'read',
+                    readAt: new Date().toISOString()
+                  }
+                }));
+              });
             } catch (err) {
-              console.error("Error updating message status:", err);
+              console.error("Error updating message status to read:", err);
             }
           }
           

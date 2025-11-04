@@ -164,11 +164,29 @@ const MessagesPage: React.FC = () => {
       // Add message to local state if not already there (in case WebSocket is slow)
       setMessages(prev => {
         // Check if message already exists to avoid duplicates
-        const messageExists = prev.some(msg => msg.id === res.data.id);
-        if (!messageExists) {
-          return [...prev, res.data];
+        // But for sent messages, we want to update the message with the one from the server
+        if (messageData.senderId === user?._id) {
+          // For sent messages, replace with server version if exists, or add if not
+          const serverMessage = res.data;
+          const existsIndex = prev.findIndex(msg => msg.timestamp === messageData.timestamp && msg.senderId === user?._id);
+          
+          if (existsIndex !== -1) {
+            // Replace the temporary message with the server version
+            const updated = [...prev];
+            updated[existsIndex] = serverMessage;
+            return updated;
+          } else {
+            // Add the server message
+            return [...prev, serverMessage];
+          }
+        } else {
+          // For received messages, check if it already exists
+          const messageExists = prev.some(msg => msg.id === res.data.id);
+          if (!messageExists) {
+            return [...prev, res.data];
+          }
+          return prev;
         }
-        return prev;
       });
 
       setNewMessage("");

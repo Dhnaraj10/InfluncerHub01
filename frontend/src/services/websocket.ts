@@ -6,10 +6,13 @@ class WebSocketService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  private token: string | null = null;
+  private isIntentionallyClosed = false;
 
   connect(token: string) {
     // Close existing connection if present
     if (this.ws) {
+      this.isIntentionallyClosed = false;
       this.ws.close();
     }
 
@@ -35,7 +38,7 @@ class WebSocketService {
     }
 
     try {
-      this.ws = new WebSocket(wsUrl);
+      this.ws = new WebSocket(`${wsUrl}?token=${token}`);
       
       this.ws.onopen = () => {
         console.log('WebSocket connected to:', wsUrl);
@@ -57,10 +60,14 @@ class WebSocketService {
         }
       };
 
-      this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+      this.ws.onclose = (event) => {
+        console.log('WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
         this.notifyConnectionListeners(false);
-        this.attemptReconnect(token);
+        
+        // Reconnect if not intentionally closed and not reached max attempts
+        if (!this.isIntentionallyClosed && this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.attemptReconnect();
+        }
       };
 
       this.ws.onerror = (error) => {
@@ -68,11 +75,12 @@ class WebSocketService {
       };
     } catch (err) {
       console.error('Error establishing WebSocket connection:', err);
-      this.attemptReconnect(token);
+      this.attemptReconnect();
     }
   }
 
   disconnect() {
+    this.isIntentionallyClosed = true;
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -111,13 +119,15 @@ class WebSocketService {
     this.connectionListeners.forEach(listener => listener(connected));
   }
 
-  private attemptReconnect(token: string) {
+  private attemptReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
       
       setTimeout(() => {
-        this.connect(token);
+        if (this.token) {
+          this.connect(this.token);
+        }
       }, this.reconnectDelay * this.reconnectAttempts);
     } else {
       console.error('Max reconnect attempts reached. Giving up.');

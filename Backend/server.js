@@ -1,88 +1,83 @@
-// bakend/server.js
-import express from "express";
-import dotenv from "dotenv";
-import cors from "cors";
-import connectDB from "./config/db.js";
-import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
+import express from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 // Import routes
-import authRoutes from "./routes/auth.js";
-import influencerRoutes from "./routes/influencers.js";
-import sponsorshipRoutes from "./routes/sponsorships.js";
-import categoryRoutes from "./routes/categories.js";
-import analyticsRoutes from "./routes/analytics.js";
-import earningsRoutes from "./routes/earnings.js";
-import messagesRoutes from "./routes/messages.js";
-import uploadRoutes from "./routes/upload.js";
-import brandRoutes from "./routes/brands.js"; // Add this line
+import authRoutes from './routes/auth.js';
+import influencerRoutes from './routes/influencers.js';
+import brandRoutes from './routes/brands.js';
+import sponsorshipRoutes from './routes/sponsorships.js';
+import categoryRoutes from './routes/categories.js';
+import uploadRoutes from './routes/upload.js';
+import messageRoutes from './routes/messages.js';
+import analyticsRoutes from './routes/analytics.js';
+import earningsRoutes from './routes/earnings.js';
+
+// Import middleware
+import { errorHandler } from './middleware/errorMiddleware.js';
 
 // Import WebSocket server
-import { initializeWebSocketServer } from "./utils/websocketServer.js";
+import { createServer } from 'http';
+import { initializeWebSocketServer } from './utils/websocketServer.js';
 
-dotenv.config();
+// Import models to ensure they are registered
+import './models/User.js';
+import './models/InfluencerProfile.js';
+import './models/BrandProfile.js';
+import './models/Sponsorship.js';
+import './models/Category.js';
+import './models/Message.js';
+import './models/MessageRequest.js';
+import './models/UserConnection.js';
+
 const app = express();
-app.use(express.json());
-
-// Configure CORS to allow frontend requests
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // List of allowed origins
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5000',
-      'https://influncerhub.vercel.app',
-      'https://influncerhub-mbsroihhg-dhanraj-singhs-projects.vercel.app'
-    ];
-    
-    // Add FRONTEND_ORIGIN if it's set
-    if (process.env.FRONTEND_ORIGIN) {
-      allowedOrigins.push(process.env.FRONTEND_ORIGIN);
-    }
-    
-    // Also allow any vercel.app subdomain for flexibility
-    if (origin && origin.endsWith('.vercel.app')) {
-      return callback(null, true);
-    }
-    
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      // Log the origin for debugging
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-
-// connect DB
-connectDB();
-
-// routes
-app.use("/api/auth", authRoutes);
-app.use("/api/influencers", influencerRoutes);
-app.use("/api/sponsorships", sponsorshipRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/analytics", analyticsRoutes);
-app.use("/api/earnings", earningsRoutes);
-app.use("/api/messages", messagesRoutes);
-app.use("/api/upload", uploadRoutes);
-app.use("/api/brands", brandRoutes); // Add this line
-
-// error middleware (must come after routes)
-app.use(notFound);
-app.use(errorHandler);
-
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server started on port ${PORT}`);
-});
+const server = createServer(app);
 
 // Initialize WebSocket server
 initializeWebSocketServer(server);
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/influencers', influencerRoutes);
+app.use('/api/brands', brandRoutes);
+app.use('/api/sponsorships', sponsorshipRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/earnings', earningsRoutes);
+
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({ message: 'API is running' });
+});
+
+// Error handling middleware
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('Connected to MongoDB');
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+})
+.catch((err) => {
+  console.error('Database connection error:', err);
+});
+
+export default app;

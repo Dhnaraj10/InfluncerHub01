@@ -12,7 +12,7 @@ import {
   cancelSponsorship,
   completeSponsorship,
   getRecentActivities
-} from "../controllers/SponsorshipController.js";
+} from "../Controllers/sponsorshipController.js";
 
 const router = express.Router();
 

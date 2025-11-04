@@ -590,18 +590,7 @@ const Profile: React.FC = () => {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-3">
-                      <button 
-                        onClick={() => setIsEditMode(true)}
-                        className="btn-primary py-3 rounded-lg font-medium"
-                      >
-                        Edit Profile
-                      </button>
-                      <button 
-                        onClick={handleDelete}
-                        className="bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition"
-                      >
-                        Delete Profile
-                      </button>
+                      {/* Removed duplicate Edit Profile and Delete Profile buttons */}
                     </div>
                   </div>
                 </div>

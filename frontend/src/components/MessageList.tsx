@@ -13,7 +13,6 @@ interface Conversation {
   lastMessage: string;
   timestamp: string;
   unreadCount: number;
-  isOnline: boolean;
 }
 
 const MessageList: React.FC = () => {
@@ -25,11 +24,51 @@ const MessageList: React.FC = () => {
     // Load initial conversations
     loadConversations();
     
-    // Listen for new messages
+    // Setup WebSocket connection and message listener
+    if (token) {
+      websocketService.connect(token);
+    }
+    
+    const handleNewMessage = (message: any) => {
+      if (message.type === 'message' && message.data) {
+        // Update conversations with new message
+        setConversations(prev => {
+          const updated = [...prev];
+          const convIndex = updated.findIndex(c => c.userId === message.data.senderId);
+          
+          if (convIndex !== -1) {
+            // Update existing conversation
+            updated[convIndex] = {
+              ...updated[convIndex],
+              lastMessage: message.data.content,
+              timestamp: message.data.timestamp,
+              unreadCount: updated[convIndex].unreadCount + 1
+            };
+          } else {
+            // Add new conversation
+            updated.unshift({
+              id: Date.now().toString(),
+              userId: message.data.senderId,
+              userName: message.data.senderName,
+              lastMessage: message.data.content,
+              timestamp: message.data.timestamp,
+              unreadCount: 1
+            });
+          }
+          
+          // Sort by timestamp (newest first)
+          return updated.sort((a, b) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+        });
+      }
+    };
+    
     websocketService.addMessageListener(handleNewMessage);
     
     return () => {
       websocketService.removeMessageListener(handleNewMessage);
+      websocketService.disconnect();
     };
   }, [token]);
 
@@ -47,8 +86,7 @@ const MessageList: React.FC = () => {
           userName: "Alex Johnson",
           lastMessage: "Sure, let's schedule a call to discuss the details",
           timestamp: new Date(Date.now() - 3600000).toISOString(),
-          unreadCount: 2,
-          isOnline: true
+          unreadCount: 2
         },
         {
           id: "2",
@@ -56,8 +94,7 @@ const MessageList: React.FC = () => {
           userName: "Sarah Miller",
           lastMessage: "Thanks for the proposal, I'll review it by tomorrow",
           timestamp: new Date(Date.now() - 86400000).toISOString(),
-          unreadCount: 0,
-          isOnline: false
+          unreadCount: 0
         },
         {
           id: "3",
@@ -65,8 +102,7 @@ const MessageList: React.FC = () => {
           userName: "TechBrand Inc",
           lastMessage: "We've approved your collaboration request!",
           timestamp: new Date(Date.now() - 172800000).toISOString(),
-          unreadCount: 1,
-          isOnline: true
+          unreadCount: 1
         }
       ];
       
@@ -75,42 +111,6 @@ const MessageList: React.FC = () => {
       console.error("Error loading conversations:", err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleNewMessage = (message: any) => {
-    if (message.type === 'message' && message.data) {
-      // Update conversations with new message
-      setConversations(prev => {
-        const updated = [...prev];
-        const convIndex = updated.findIndex(c => c.userId === message.data.senderId);
-        
-        if (convIndex !== -1) {
-          // Update existing conversation
-          updated[convIndex] = {
-            ...updated[convIndex],
-            lastMessage: message.data.content,
-            timestamp: message.data.timestamp,
-            unreadCount: updated[convIndex].unreadCount + 1
-          };
-        } else {
-          // Add new conversation
-          updated.unshift({
-            id: Date.now().toString(),
-            userId: message.data.senderId,
-            userName: message.data.senderName,
-            lastMessage: message.data.content,
-            timestamp: message.data.timestamp,
-            unreadCount: 1,
-            isOnline: true
-          });
-        }
-        
-        // Sort by timestamp (newest first)
-        return updated.sort((a, b) => 
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-      });
     }
   };
 
@@ -163,9 +163,6 @@ const MessageList: React.FC = () => {
                   {conversation.userName.charAt(0).toUpperCase()}
                 </span>
               </div>
-              {conversation.isOnline && (
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-              )}
             </div>
             
             <div className="ml-3 flex-1 min-w-0">

@@ -71,7 +71,7 @@ export const initializeWebSocketServer = (server) => {
             recipientWs.send(JSON.stringify(message));
           }
           
-          // Also send back to sender for confirmation
+          // Always send back to sender for confirmation
           if (ws.readyState === ws.OPEN) {
             ws.send(JSON.stringify(message));
           }

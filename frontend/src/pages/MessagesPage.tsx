@@ -23,7 +23,6 @@ const MessagesPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [recipient, setRecipient] = useState<{ id: string; name: string } | null>(null);
-  const [connected, setConnected] = useState(false);
   const [activeTab, setActiveTab] = useState<"messages" | "requests">("messages");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -45,9 +44,6 @@ const MessagesPage: React.FC = () => {
     if (token) {
       websocketService.connect(token);
       
-      websocketService.addMessageListener(handleWebSocketMessage);
-      websocketService.addConnectionListener(handleConnectionChange);
-      
       // Load initial messages if we have a recipient
       if (recipient) {
         loadMessages();
@@ -57,36 +53,38 @@ const MessagesPage: React.FC = () => {
     }
     
     return () => {
-      websocketService.removeMessageListener(handleWebSocketMessage);
-      websocketService.removeConnectionListener(handleConnectionChange);
+      // Cleanup if needed
     };
   }, [token, recipient]);
 
   // Handle WebSocket messages
-  const handleWebSocketMessage = (message: any) => {
-    if (message.type === 'message' && message.data) {
-      // Check if the message is from our recipient
-      if (
-        (message.data.senderId === recipient?.id && message.data.recipientId === user?._id) ||
-        (message.data.senderId === user?._id && message.data.recipientId === recipient?.id)
-      ) {
-        setMessages(prev => [...prev, message.data]);
+  useEffect(() => {
+    const handleWebSocketMessage = (message: any) => {
+      if (message.type === 'message' && message.data) {
+        // Check if the message is from our recipient
+        if (
+          (message.data.senderId === recipient?.id && message.data.recipientId === user?._id) ||
+          (message.data.senderId === user?._id && message.data.recipientId === recipient?.id)
+        ) {
+          setMessages(prev => [...prev, message.data]);
+        }
+      } else if (message.type === 'messageRequestConfirmation') {
+        // Show confirmation that request was sent
+        console.log("Message request sent successfully");
+      } else if (message.type === 'requestAccepted') {
+        // Reload messages when a request is accepted
+        if (recipient) {
+          loadMessages();
+        }
       }
-    } else if (message.type === 'messageRequestConfirmation') {
-      // Show confirmation that request was sent
-      console.log("Message request sent successfully");
-    } else if (message.type === 'requestAccepted') {
-      // Reload messages when a request is accepted
-      if (recipient) {
-        loadMessages();
-      }
-    }
-  };
-
-  // Handle WebSocket connection status
-  const handleConnectionChange = (connected: boolean) => {
-    setConnected(connected);
-  };
+    };
+    
+    websocketService.addMessageListener(handleWebSocketMessage);
+    
+    return () => {
+      websocketService.removeMessageListener(handleWebSocketMessage);
+    };
+  }, [recipient, user]);
 
   // Load messages
   const loadMessages = async () => {
@@ -104,24 +102,8 @@ const MessagesPage: React.FC = () => {
       setMessages(res.data);
     } catch (err) {
       console.error("Error loading messages:", err);
-      // Fallback to sample data if API fails
-      const sampleMessages: Message[] = [
-        {
-          id: "1",
-          senderId: user?._id || "",
-          senderName: user?.name || "You",
-          content: "Hi there! I'm interested in your sponsorship offer.",
-          timestamp: new Date(Date.now() - 3600000).toISOString()
-        },
-        {
-          id: "2",
-          senderId: recipient.id,
-          senderName: recipient.name,
-          content: "Hello! Thanks for your interest. Let's discuss the details.",
-          timestamp: new Date(Date.now() - 1800000).toISOString()
-        }
-      ];
-      setMessages(sampleMessages);
+      // Fallback to empty array
+      setMessages([]);
     } finally {
       setLoading(false);
     }
@@ -302,15 +284,11 @@ const MessagesPage: React.FC = () => {
                       {recipient?.name.charAt(0).toUpperCase() || "U"}
                     </span>
                   </div>
-                  <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${connected ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                 </div>
                 <div className="ml-3">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {recipient?.name || "User"}
                   </h2>
-                  <p className={`text-sm ${connected ? 'text-green-500' : 'text-gray-500'}`}>
-                    {connected ? 'Online' : 'Offline'}
-                  </p>
                 </div>
               </div>
             </div>
@@ -384,7 +362,7 @@ const MessagesPage: React.FC = () => {
               </div>
               <button
                 type="submit"
-                disabled={!newMessage.trim() || !connected}
+                disabled={!newMessage.trim()}
                 className="p-3 bg-primary hover:bg-primary-dark text-white rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

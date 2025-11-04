@@ -23,6 +23,14 @@ const MessageRequests: React.FC = () => {
     loadRequests();
     
     // Listen for new message requests
+    const handleWebSocketMessage = (message: any) => {
+      if (message.type === 'messageRequest') {
+        // In a real app, you would add the new request to the list
+        // For now, we'll just reload all requests
+        loadRequests();
+      }
+    };
+    
     websocketService.addMessageListener(handleWebSocketMessage);
     
     return () => {
@@ -45,15 +53,9 @@ const MessageRequests: React.FC = () => {
       setRequests(res.data);
     } catch (err) {
       console.error("Error loading message requests:", err);
+      setRequests([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleWebSocketMessage = (message: any) => {
-    if (message.type === 'messageRequest') {
-      // Add new request to the list
-      setRequests(prev => [...prev, message.data]);
     }
   };
 

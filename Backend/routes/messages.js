@@ -17,18 +17,20 @@ router.get("/", auth, (req, res) => {
     return res.status(400).json({ error: "Recipient ID is required" });
   }
   
-  // Check if there's a connection between users
+  // Check if there's a connection between users or if they have a sponsorship
   const connection = userConnections.find(conn => 
     (conn.user1 === req.user.id && conn.user2 === recipient) ||
     (conn.user1 === recipient && conn.user2 === req.user.id)
   );
   
+  // If there's no connection, check if there's a message request
   if (!connection) {
-    // Check if there's a message request
     const request = messageRequests.find(req => 
-      req.from === req.user.id && req.to === recipient
+      (req.from === req.user.id && req.to === recipient) ||
+      (req.from === recipient && req.to === req.user.id)
     );
     
+    // If there's no request, return empty array
     if (!request) {
       return res.json([]);
     }
@@ -60,13 +62,17 @@ router.post("/", auth, (req, res) => {
     (conn.user1 === recipientId && conn.user2 === req.user.id)
   );
   
-  // Check if there's a message request
+  // Check if there's an existing message request
   const existingRequest = messageRequests.find(req => 
     req.from === req.user.id && req.to === recipientId
   );
   
-  if (!connection) {
-    // If no connection, create a message request instead
+  // If no connection, check if they have a sponsorship relationship
+  // In a real app, you would check the database for existing sponsorships between these users
+  const hasSponsorship = false; // Placeholder - implement real sponsorship check
+  
+  if (!connection && !hasSponsorship) {
+    // If no connection and no sponsorship, create a message request instead
     if (!existingRequest) {
       const request = {
         id: Date.now().toString(),
@@ -90,7 +96,7 @@ router.post("/", auth, (req, res) => {
     }
   }
   
-  // If there's a connection, send the message normally
+  // If there's a connection or sponsorship, send the message normally
   const msg = { 
     id: Date.now().toString(),
     senderId: req.user.id, 

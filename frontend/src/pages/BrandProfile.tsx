@@ -219,6 +219,9 @@ const BrandProfile: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Version indicator - helps identify if latest code is running */}
+      <div className="text-xs text-gray-500 text-center mb-2">BrandProfile v1.1</div>
+      
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
         {isEditMode || !profileExists ? (
           // Edit mode

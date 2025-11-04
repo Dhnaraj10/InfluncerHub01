@@ -1,11 +1,11 @@
 // frontend/src/components/BrandCard.tsx
 import React from 'react';
-import { BrandProfile } from '../types/types';
 import { Link } from 'react-router-dom';
+import { BrandProfile } from '../types/types';
 import { FaInstagram, FaTwitter, FaLinkedin, FaLink } from 'react-icons/fa';
 
 interface BrandCardProps {
-  brand: BrandProfile & { _id?: string; user?: { _id?: string } };
+  brand: BrandProfile;
 }
 
 const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
@@ -20,53 +20,60 @@ const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
 
   // Format price with currency
   const formatPrice = (value?: number) => {
-    if (value === undefined || value === null) return null;
+    if (value === undefined || value === null) return 'N/A';
+    // show integer or two decimals if fractional
     const v = Number(value);
     const formatted = Number.isInteger(v) ? v.toString() : v.toFixed(2);
     return `₹${formatted}`;
   };
 
-  // Get the correct ID for the brand profile link
-  // Use user._id if available (for public brand profiles), otherwise use brand._id
-  const brandProfileId = brand.user?._id || brand._id;
+  // Get brand profile ID from user object
+  const brandProfileId = brand.user?._id;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-200 dark:border-gray-700">
+    <div className="card hover:shadow-xl transition-shadow duration-300">
       <div className="p-6">
-        {/* Brand Header */}
-        <div className="flex items-start space-x-4">
+        <div className="flex items-start gap-4">
           {brand.logoUrl ? (
             <img 
               src={brand.logoUrl} 
-              alt={`${brand.companyName} logo`} 
-              className="w-16 h-16 object-contain rounded-full"
+              alt={brand.companyName} 
+              className="w-16 h-16 rounded-full object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "https://placehold.co/100";
+              }}
             />
           ) : (
-            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
           )}
+          
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">
               {brand.companyName}
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 truncate">{brand.industry}</p>
-            {brand.budgetPerPost && (
-              <p className="text-sm font-semibold text-primary dark:text-primary-light">
-                {formatPrice(brand.budgetPerPost)} per post
+            <p className="text-gray-600 dark:text-gray-300">
+              {brand.industry}
+            </p>
+            <div className="mt-1 bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 inline-block">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Budget/post</span>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                {brand.budgetPerPost ? formatPrice(brand.budgetPerPost) : 'N/A'}
               </p>
-            )}
+            </div>
           </div>
         </div>
-
-        {/* Description */}
-        {brand.description && (
-          <p className="mt-4 text-gray-700 dark:text-gray-300 line-clamp-2">
-            {brand.description}
-          </p>
-        )}
+        
+        <p className="mt-4 text-gray-600 dark:text-gray-300 line-clamp-2">
+          {brand.description || "No description provided"}
+        </p>
+        
+        {/* Version indicator - helps identify if latest code is running */}
+        <div className="text-xs text-gray-400 text-right mt-1">BrandCard v1.1</div>
 
         {/* Social Links */}
         {(brand.socialLinks?.instagram || brand.socialLinks?.twitter || brand.socialLinks?.linkedin || brand.website) && (

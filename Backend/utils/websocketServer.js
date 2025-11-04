@@ -70,19 +70,19 @@ export const initializeWebSocketServer = (server) => {
           let dbMessage;
           try {
             dbMessage = new Message({
-              sender: ws.userId,
-              recipient: recipientId,
+              sender: ws.userId, // This should be a string ID
+              recipient: recipientId, // This should be a string ID
               content: content,
               status: 'sent'  // Default status
             });
             await dbMessage.save();
             
-            // Populate sender info
+            // Populate sender info for response
             await dbMessage.populate('sender', 'name');
             message.data = { 
               ...message.data, 
               ...dbMessage.toObject(),
-              senderId: dbMessage.sender._id.toString(), // Convert ObjectId to string
+              senderId: dbMessage.sender._id.toString(), // Ensure it's a string ID
               status: dbMessage.status
             };
           } catch (err) {
@@ -129,39 +129,6 @@ export const initializeWebSocketServer = (server) => {
             ws.send(JSON.stringify(responseMessage));
           }
           
-          // Handle read status if recipient is the one sending
-          if (recipientId === ws.userId && dbMessage) {
-            try {
-              await Message.findByIdAndUpdate(dbMessage._id, { 
-                status: 'read',
-                readAt: new Date()
-              });
-              
-              // Broadcast read status update to all connected clients of the recipient
-              const recipientConnections = Array.from(clients.values()).filter(
-                client => client.userId === recipientId && client.readyState === client.OPEN
-              );
-              
-              recipientConnections.forEach(client => {
-                client.send(JSON.stringify({
-                  type: 'messageStatusUpdate',
-                  data: {
-                    messageId: dbMessage._id,
-                    status: 'read',
-                    readAt: new Date().toISOString()
-                  }
-                }));
-              });
-            } catch (err) {
-              console.error("Error updating message status to read:", err);
-            }
-          }
-          
-          // Always send back to sender for confirmation
-          if (ws.readyState === ws.OPEN) {
-            ws.send(JSON.stringify(message));
-          }
-          
           console.log(`Message from ${ws.userId} to ${recipientId}: ${content}`);
         } else if (message.type === 'messageRequest' && ws.userId) {
           // Handle message request
@@ -174,8 +141,8 @@ export const initializeWebSocketServer = (server) => {
           // Save message request to database
           try {
             const dbRequest = new MessageRequest({
-              from: ws.userId,
-              to: recipientId,
+              from: ws.userId, // This should be a string ID
+              to: recipientId, // This should be a string ID
               content: content
             });
             await dbRequest.save();
@@ -222,15 +189,15 @@ export const initializeWebSocketServer = (server) => {
               // Create connection if it doesn't exist
               const existingConnection = await UserConnection.findOne({
                 $or: [
-                  { user1: request.from, user2: request.to },
-                  { user1: request.to, user2: request.from }
+                  { user1: request.from.toString(), user2: request.to.toString() },
+                  { user1: request.to.toString(), user2: request.from.toString() }
                 ]
               });
               
               if (!existingConnection) {
                 const connection = new UserConnection({
-                  user1: request.from,
-                  user2: request.to
+                  user1: request.from.toString(), // Ensure it's a string ID
+                  user2: request.to.toString()    // Ensure it's a string ID
                 });
                 await connection.save();
               }

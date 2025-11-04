@@ -53,14 +53,15 @@ const SearchPage: React.FC = () => {
     try {
       if (searchType === 'influencers') {
         const data = await searchService.getAllInfluencers({ limit: 20 });
-        setResults(data.results || []);
+        setResults(data?.results || []);
       } else {
         const data = await searchService.getAllBrands({ limit: 20 });
-        setResults(data.results || []);
+        setResults(data?.results || []);
       }
     } catch (err: any) {
       console.error('Error loading initial results:', err);
       toast.error(err.message || 'Failed to load results');
+      setResults([]); // Ensure results is always an array
     } finally {
       setLoading(false);
     }
@@ -78,12 +79,14 @@ const SearchPage: React.FC = () => {
         if (formData.tags.length > 0) params.tags = formData.tags.join(',');
 
         const data = await searchService.searchInfluencers(params);
-        setResults(data.results || []);
+        const results = data?.results || [];
 
-        if ((data.results || []).length === 0) {
+        if (results.length === 0) {
           // Show latest influencers if no results
           const latestData = await searchService.getAllInfluencers({ limit: 20 });
-          setResults(latestData.results || []);
+          setResults(latestData?.results || []);
+        } else {
+          setResults(results);
         }
       } else {
         // Brand search
@@ -95,28 +98,32 @@ const SearchPage: React.FC = () => {
 
         const data = await searchService.searchBrands(params);
         console.log('Brand search results:', data);
-        setResults(data.results || []);
+        const results = data?.results || [];
         
-        if (!data.results || data.results.length === 0) {
+        if (results.length === 0) {
           // Show latest brands if no results
           const latestData = await searchService.getAllBrands({ limit: 20 });
           console.log('Latest brands results:', latestData);
-          setResults(latestData.results || []);
+          setResults(latestData?.results || []);
+        } else {
+          setResults(results);
         }
       }
     } catch (err: any) {
+      console.error('Search error:', err);
       toast.error(err.message || 'An error occurred during search.');
       // Show latest results as fallback
       try {
         if (searchType === 'influencers') {
           const fallbackData = await searchService.getAllInfluencers({ limit: 20 });
-          setResults(fallbackData.results || []);
+          setResults(fallbackData?.results || []);
         } else {
           const fallbackData = await searchService.getAllBrands({ limit: 20 });
-          setResults(fallbackData.results || []);
+          setResults(fallbackData?.results || []);
         }
       } catch (fallbackError) {
         console.error('Fallback search error:', fallbackError);
+        setResults([]); // Ensure results is always an array
       }
     } finally {
       setLoading(false);
@@ -227,7 +234,7 @@ const SearchPage: React.FC = () => {
                 Found {results.length} {searchType}
               </div>
               
-              {results.length > 0 ? (
+              {results && results.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {searchType === 'influencers' 
                     ? results.map((influencer: InfluencerProfile) => (

@@ -2,70 +2,80 @@
 import BrandProfile from "../models/BrandProfile.js";
 import User from "../models/User.js";
 
+// Helper function for sending error responses
+const sendError = (res, status, message, error = null) => {
+  console.error(`Error ${status}: ${message}`, error ? '\n' + error.stack : '');
+  return res.status(status).json({ 
+    success: false,
+    error: message,
+    ...(error && { stack: error.stack })
+  });
+};
+
 // Create or Update brand profile
 export const createOrUpdateProfile = async (req, res) => {
-  const {
-    companyName,
-    industry,
-    description,
-    logoUrl,
-    website,
-    contactEmail,
-    socialLinks,
-    budgetPerPost,
-  } = req.body;
-
-  // Validate required fields
-  if (!companyName) {
-    return res.status(400).json({ msg: "Company name is required" });
-  }
-  
-  if (!industry) {
-    return res.status(400).json({ msg: "Industry is required" });
-  }
-  
-  if (!contactEmail) {
-    return res.status(400).json({ msg: "Contact email is required" });
-  }
-
-  const profileFields = { user: req.user.id };
-
-  // Required fields
-  profileFields.companyName = companyName;
-  profileFields.industry = industry;
-  profileFields.contactEmail = contactEmail;
-
-  // Optional fields
-  if (description !== undefined) profileFields.description = description || "";
-  if (logoUrl !== undefined) profileFields.logoUrl = logoUrl || "";
-  if (website) profileFields.website = website;
-  if (budgetPerPost !== undefined) profileFields.budgetPerPost = budgetPerPost;
-
-  // Merge socialLinks safely
-  const existingProfile = await BrandProfile.findOne({ user: req.user.id });
-  if (socialLinks) {
-    profileFields.socialLinks = {
-      ...(existingProfile?.socialLinks || {}),
-      ...socialLinks
-    };
-  } else if (existingProfile?.socialLinks) {
-    profileFields.socialLinks = existingProfile.socialLinks;
-  }
-
   try {
+    const {
+      companyName,
+      industry,
+      description,
+      logoUrl,
+      website,
+      contactEmail,
+      socialLinks,
+      budgetPerPost,
+    } = req.body;
+
+    // Validate required fields
+    if (!companyName) {
+      return sendError(res, 400, 'Company name is required');
+    }
+    
+    if (!industry) {
+      return sendError(res, 400, 'Industry is required');
+    }
+    
+    if (!contactEmail) {
+      return sendError(res, 400, 'Contact email is required');
+    }
+
+    const profileFields = { user: req.user.id };
+
+    // Required fields
+    profileFields.companyName = companyName;
+    profileFields.industry = industry;
+    profileFields.contactEmail = contactEmail;
+
+    // Optional fields
+    if (description !== undefined) profileFields.description = description || "";
+    if (logoUrl !== undefined) profileFields.logoUrl = logoUrl || "";
+    if (website) profileFields.website = website;
+    if (budgetPerPost !== undefined) profileFields.budgetPerPost = budgetPerPost;
+
+    // Merge socialLinks safely
+    const existingProfile = await BrandProfile.findOne({ user: req.user.id });
+    if (socialLinks) {
+      profileFields.socialLinks = {
+        ...(existingProfile?.socialLinks || {}),
+        ...socialLinks
+      };
+    } else if (existingProfile?.socialLinks) {
+      profileFields.socialLinks = existingProfile.socialLinks;
+    }
+
     let profile = await BrandProfile.findOneAndUpdate(
       { user: req.user.id },
       { $set: profileFields },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     ).populate("user", ["name", "avatar"]);
 
-    res.json(profile);
+    res.json({ success: true, profile });
+    
   } catch (err) {
-    console.error('Brand profile save error:', err.message);
     if (err.name === 'ValidationError') {
-      return res.status(400).json({ msg: 'Validation error', errors: err.errors });
+      return sendError(res, 400, 'Validation error', err);
     }
-    res.status(500).send("Server Error");
+    return sendError(res, 500, 'Server error', err);
   }
 };
 
@@ -78,31 +88,33 @@ export const getMyProfile = async (req, res) => {
     );
 
     if (!profile) {
-      return res.status(400).json({ msg: "There is no profile for this user" });
+      return sendError(res, 404, 'Brand profile not found');
     }
 
-    res.json(profile);
+    res.json({ success: true, profile });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server Error");
+    return sendError(res, 500, 'Server error', err);
   }
 };
 
 // Get profile by user ID
 export const getProfileById = async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return sendError(res, 400, 'Invalid profile ID');
+    }
+
     const profile = await BrandProfile.findOne({ user: req.params.userId })
       .populate("user", ["name", "email"]);
+    
     if (!profile) {
-      return res.status(404).json({ msg: "Brand profile not found" });
+      return sendError(res, 404, 'Brand profile not found');
     }
-    res.json(profile);
+    
+    res.json({ success: true, profile });
   } catch (err) {
-    console.error(err.message);
-    if (err.kind === "ObjectId") {
-      return res.status(400).json({ msg: "Invalid profile ID" });
-    }
-    res.status(500).send("Server Error");
+    return sendError(res, 500, 'Server error', err);
   }
 };
 
@@ -110,6 +122,10 @@ export const getProfileById = async (req, res) => {
 export const searchBrands = async (req, res) => {
   try {
     const { q, industry, minBudget, maxBudget, page = 1, limit = 20 } = req.query;
+    
+    // Validate pagination parameters
+    const pageNumber = Math.max(1, Number(page));
+    const pageSize = Math.min(50, Number(limit));
     
     // Build filter criteria
     const filter = {};
@@ -136,9 +152,6 @@ export const searchBrands = async (req, res) => {
     }
     
     // Apply filters with pagination
-    const pageNumber = Math.max(1, Number(page));
-    const pageSize = Math.min(50, Number(limit)); // Limit maximum results per page
-    
     const docs = await BrandProfile.find(filter)
       .populate('user', ['name', 'email', 'avatar'])
       .sort('-createdAt')
@@ -150,6 +163,7 @@ export const searchBrands = async (req, res) => {
     const total = await BrandProfile.countDocuments(filter);
     
     res.json({ 
+      success: true,
       total, 
       page: pageNumber, 
       limit: pageSize, 
@@ -157,41 +171,50 @@ export const searchBrands = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error in brand search:', error);
-    res.status(500).json({ 
-      error: 'Server error',
-      message: error.message 
-    });
+    return sendError(res, 500, 'Error in brand search', error);
   }
 };
 
 // Get all brands (latest)
 export const getAllBrands = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query; // Increased default limit to 20
+    const { page = 1, limit = 20 } = req.query;
+    
+    // Validate pagination parameters
+    const pageNumber = Math.max(1, Number(page));
+    const pageSize = Math.min(50, Number(limit));
     
     const docs = await BrandProfile.find()
       .populate('user', ['name', 'email', 'avatar'])
       .sort('-createdAt')
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((pageNumber - 1) * pageSize)
+      .limit(pageSize);
 
     const total = await BrandProfile.countDocuments();
 
-    res.json({ total, page: Number(page), limit: Number(limit), results: docs });
+    res.json({ 
+      success: true,
+      total, 
+      page: pageNumber, 
+      limit: pageSize, 
+      results: docs 
+    });
   } catch (err) {
-    console.error('Error fetching all brands:', err.message);
-    res.status(500).send('Server error');
+    return sendError(res, 500, 'Error fetching all brands', err);
   }
 };
 
 // Delete brand profile
 export const deleteProfile = async (req, res) => {
   try {
-    await BrandProfile.findOneAndRemove({ user: req.user.id });
-    res.json({ msg: "Profile deleted" });
+    const profile = await BrandProfile.findOneAndRemove({ user: req.user.id });
+    
+    if (!profile) {
+      return sendError(res, 404, 'Brand profile not found');
+    }
+    
+    res.json({ success: true, msg: "Profile deleted" });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server Error");
+    return sendError(res, 500, 'Server error', err);
   }
 };

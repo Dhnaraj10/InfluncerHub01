@@ -64,40 +64,46 @@ export const createOrUpdateProfile = async (req, res) => {
   }
 
   try {
-    // upsert profile (create if doesn't exist)
     let profile = await InfluencerProfile.findOneAndUpdate(
       { user: req.user.id },
       { $set: profileFields },
-      { new: true, upsert: true }
+      { new: true, upsert: true, setDefaultsOnInsert: true }
     )
-      .populate("user", ["name", "email", "avatar"])
+      .populate("user", ["name", "avatar"])
       .populate("categories", "name");
 
-    return res.json(profile);
+    res.json(profile);
   } catch (err) {
-    console.error("Error saving profile:", err.message);
-    res.status(500).send("Server error");
+    console.error(err.message);
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ 
+        msg: "Validation error", 
+        errors: err.errors 
+      });
+    }
+    res.status(500).send("Server Error");
   }
 };
 
-// Get current influencer's profile
+// Get current user's influencer profile
 export const getMyProfile = async (req, res) => {
   try {
     const profile = await InfluencerProfile.findOne({ user: req.user.id })
-      .populate("user", ["name", "email", "avatar"])
+      .populate("user", ["name", "avatar"])
       .populate("categories", "name");
 
     if (!profile) {
-      return res.status(404).json({ msg: "Profile not found for this user" });
+      return res.status(400).json({ msg: "There is no profile for this user" });
     }
+
     res.json(profile);
   } catch (err) {
-    console.error("Error fetching profile:", err.message);
-    res.status(500).send("Server error");
+    console.error(err.message);
+    res.status(500).send("Server Error");
   }
 };
 
-// Get influencer profile by handle
+// Get profile by handle
 export const getProfileByHandle = async (req, res) => {
   try {
     const profile = await InfluencerProfile.findOne({ handle: req.params.handle })
@@ -107,14 +113,18 @@ export const getProfileByHandle = async (req, res) => {
     if (!profile) {
       return res.status(404).json({ msg: "Profile not found" });
     }
+
     res.json(profile);
   } catch (err) {
-    console.error("Error fetching profile by handle:", err.message);
-    res.status(500).send("Server error");
+    console.error(err.message);
+    if (err.kind === "ObjectId") {
+      return res.status(400).json({ msg: "Invalid profile handle" });
+    }
+    res.status(500).send("Server Error");
   }
 };
 
-// Search influencers
+// Search influencers with filters
 export const searchInfluencers = async (req, res) => {
   const {
     q,
@@ -152,7 +162,6 @@ export const searchInfluencers = async (req, res) => {
     const docs = await InfluencerProfile.find(filter)
       .populate("user", ["name", "avatar"])
       .populate("categories", "name")
-      .select("socialLinks") // Ensure socialLinks is included
       .sort(sort)
       .skip(skip)
       .limit(Number(limit));
@@ -162,7 +171,7 @@ export const searchInfluencers = async (req, res) => {
     res.json({ total, page: Number(page), limit: Number(limit), results: docs });
   } catch (err) {
     console.error("Error searching influencers:", err.message);
-    res.status(500).send("Server error");
+    res.status(500).send("Server Error");
   }
 };
 
@@ -177,15 +186,14 @@ export const getAllInfluencers = async (req, res) => {
       .populate("categories", "name")
       .sort(sort)
       .skip(skip)
-      .limit(Number(limit))
-      .select("socialLinks"); // 添加这一行来填充 socialLinks 字段
+      .limit(Number(limit));
 
     const total = await InfluencerProfile.countDocuments();
 
     res.json({ total, page: Number(page), limit: Number(limit), results: docs });
   } catch (err) {
     console.error("Error fetching all influencers:", err.message);
-    res.status(500).send("Server error");
+    res.status(500).send("Server Error");
   }
 };
 

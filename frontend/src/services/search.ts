@@ -27,7 +27,8 @@ export const searchService = {
       const response = await fetch(url);
       
       if (!response.ok) {
-        throw new Error(`Search failed with status ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Search failed with status ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
@@ -57,7 +58,8 @@ export const searchService = {
       const response = await fetch(url);
       
       if (!response.ok) {
-        throw new Error(`Get all influencers failed with status ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Get all influencers failed with status ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
@@ -87,7 +89,8 @@ export const searchService = {
       const response = await fetch(url);
       
       if (!response.ok) {
-        throw new Error(`Brand search failed with status ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Brand search failed with status ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
@@ -117,7 +120,8 @@ export const searchService = {
       const response = await fetch(url);
       
       if (!response.ok) {
-        throw new Error(`Get all brands failed with status ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Get all brands failed with status ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();

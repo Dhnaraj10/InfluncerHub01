@@ -11,7 +11,7 @@ import {
   cancelSponsorship,
   completeSponsorship,
   getRecentActivities
-} from "../controllers/sponsorshipController.js";
+} from "../controllers/SponsorshipController.js";
 
 const router = express.Router();
 

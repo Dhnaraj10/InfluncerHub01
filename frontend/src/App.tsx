@@ -18,6 +18,7 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import MessagesPage from "./pages/MessagesPage";
 import NotFoundPage from "./pages/NotFound";
 import SettingsPage from "./pages/Settings";
+import SponsorshipDetailPage from "./pages/SponsorshipDetailPage";
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <Route path="/influencer/:handle" element={<InfluencerPage />} />
           <Route path="/sponsorships" element={<SponsorshipsPage />} />
           <Route path="/sponsorships/create" element={<CreateSponsorshipPage />} />
+          <Route path="/sponsorships/:id" element={<SponsorshipDetailPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/settings" element={<SettingsPage />} />

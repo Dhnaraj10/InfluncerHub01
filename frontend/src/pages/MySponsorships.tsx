@@ -264,7 +264,10 @@ const MySponsorships: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredSponsorships.map((sponsorship) => (
-                  <tr key={sponsorship._id} className="hover:bg-gray-50">
+                  <tr 
+                    key={sponsorship._id} 
+                    className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-150"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-medium text-gray-900">

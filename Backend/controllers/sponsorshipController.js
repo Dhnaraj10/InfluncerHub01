@@ -76,6 +76,72 @@ export const createSponsorship = async (req, res) => {
   }
 };
 
+// @desc    Get a single sponsorship by ID
+// @route   GET /api/sponsorships/:id
+// @access  Private
+export const getSponsorshipById = async (req, res) => {
+  try {
+    const sponsorship = await Sponsorship.findById(req.params.id)
+      .populate({
+        path: "brand",
+        select: "_id user companyName contactEmail",
+        populate: {
+          path: "user",
+          select: "name email"
+        }
+      })
+      .populate({
+        path: "influencer",
+        select: "handle user",
+        populate: {
+          path: "user",
+          select: "name"
+        }
+      });
+
+    if (!sponsorship) {
+      return res.status(404).json({ message: "Sponsorship not found" });
+    }
+
+    // Ensure proper brand name
+    if (sponsorship.brand) {
+      sponsorship.brand.name = sponsorship.brand.companyName || 
+                              sponsorship.brand.contactEmail || 
+                              (sponsorship.brand.user?.name) || 
+                              "Unknown Brand";
+    }
+
+    // Ensure proper influencer name
+    if (sponsorship.influencer && sponsorship.influencer.user) {
+      sponsorship.influencer.name = sponsorship.influencer.user.name;
+    }
+
+    // Check if user has permission to view this sponsorship
+    let hasPermission = false;
+    
+    if (req.user.role === "brand") {
+      const brandProfile = await BrandProfile.findOne({ user: req.user._id });
+      if (brandProfile && sponsorship.brand._id.toString() === brandProfile._id.toString()) {
+        hasPermission = true;
+      }
+    } else if (req.user.role === "influencer") {
+      const influencerProfile = await InfluencerProfile.findOne({ user: req.user._id });
+      if (influencerProfile && sponsorship.influencer._id.toString() === influencerProfile._id.toString()) {
+        hasPermission = true;
+      }
+    }
+
+    if (!hasPermission) {
+      return res.status(403).json({ message: "Not authorized to view this sponsorship" });
+    }
+
+    res.json(sponsorship);
+  } catch (err) {
+    console.error("Error fetching sponsorship:", err);
+    res.status(500).send("Server Error");
+  }
+};
+
 // @desc    Get all sponsorships for the logged-in brand
 // @route   GET /api/sponsorships/brand/my
 // @access  Private (Brand)

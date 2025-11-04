@@ -3,6 +3,7 @@ import express from "express";
 import auth from "../middleware/authMiddleware.js";
 import {
   createSponsorship,
+  getSponsorshipById,
   getMySponsorships,
   getMyBrandSponsorships,
   acceptSponsorship,
@@ -17,6 +18,9 @@ const router = express.Router();
 
 // Brand creates sponsorship
 router.post("/", auth, createSponsorship);
+
+// Get a single sponsorship by ID
+router.get("/:id", auth, getSponsorshipById);
 
 // Influencer views their sponsorship offers
 router.get("/my", auth, getMySponsorships);

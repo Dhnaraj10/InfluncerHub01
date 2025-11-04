@@ -35,7 +35,7 @@ export const createOrUpdateProfile = async (req, res) => {
   // ✅ Always include avatarUrl (empty string if removed)
   profileFields.avatarUrl = avatarUrl || "";
 
-  // ✅ Merge socialLinks safely (don’t overwrite missing ones)
+  // ✅ Merge socialLinks safely (don't overwrite missing ones)
   const existingProfile = await InfluencerProfile.findOne({ user: req.user.id });
   const existingLinks = existingProfile?.socialLinks || {};
 

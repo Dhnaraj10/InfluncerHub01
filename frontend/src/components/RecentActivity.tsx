@@ -148,7 +148,7 @@ const RecentActivity: React.FC = () => {
           </div>
         ) : (
           activities.map((activity) => (
-            <div key={activity.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+            <div key={activity.id} className="px-6 py-4 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors duration-200">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   {activity.type === 'sponsorship' && (

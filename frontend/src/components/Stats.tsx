@@ -1,23 +1,70 @@
 //frontend/src/components/Stats.tsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../useAuth';
+import { getInfluencerStats, getBrandStats, DashboardStats, BrandDashboardStats } from '../services/analytics';
+import { getInfluencerSponsorships, getBrandSponsorships } from '../services/sponsorship';
 
 const Stats: React.FC = () => {
-  const { user } = useAuth();
-  
+  const { user, token } = useAuth();
+  const [influencerStats, setInfluencerStats] = useState<DashboardStats | null>(null);
+  const [brandStats, setBrandStats] = useState<BrandDashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!token) return;
+      
+      try {
+        setLoading(true);
+        if (user?.role === 'brand') {
+          const stats = await getBrandStats(token);
+          setBrandStats(stats);
+        } else {
+          const stats = await getInfluencerStats(token);
+          setInfluencerStats(stats);
+        }
+      } catch (err) {
+        console.error('Error fetching stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [token, user?.role]);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[...Array(3)].map((_, index) => (
+          <div key={index} className="card p-6 animate-pulse">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-4"></div>
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16 mb-4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+              </div>
+              <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (user?.role === 'brand') {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card p-6 hover-lift transition-all duration-300 border-l-4 border-primary">
+        <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300 border-l-4 border-primary">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Active Sponsorships</h4>
-              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">8</p>
+              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">{brandStats?.activeSponsorships || 0}</p>
               <p className="text-sm font-medium text-green-500 mt-2 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
-                <span>+2 from last week</span>
+                <span>+{brandStats?.activeSponsorshipsChange || 0} from last week</span>
               </p>
             </div>
             <div className="w-12 h-12 bg-primary-light/20 rounded-full flex items-center justify-center">
@@ -28,16 +75,16 @@ const Stats: React.FC = () => {
           </div>
         </div>
 
-        <div className="card p-6 hover-lift transition-all duration-300 border-l-4 border-secondary">
+        <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300 border-l-4 border-secondary">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Budget</h4>
-              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">₹1,25,000</p>
+              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">₹{brandStats ? brandStats.totalBudget.toLocaleString() : '0'}</p>
               <p className="text-sm font-medium text-green-500 mt-2 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
-                <span>+15% from last month</span>
+                <span>+{brandStats?.budgetChange || 0}% from last month</span>
               </p>
             </div>
             <div className="w-12 h-12 bg-secondary-light/20 rounded-full flex items-center justify-center">
@@ -48,16 +95,16 @@ const Stats: React.FC = () => {
           </div>
         </div>
 
-        <div className="card p-6 hover-lift transition-all duration-300 border-l-4 border-accent">
+        <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300 border-l-4 border-accent">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Campaigns This Month</h4>
-              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">3</p>
+              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">{brandStats?.campaignsThisMonth || 0}</p>
               <p className="text-sm font-medium text-green-500 mt-2 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
-                <span>1 new campaign</span>
+                <span>{brandStats?.campaignsChange || 0} new campaign{brandStats && brandStats.campaignsChange !== 1 ? 's' : ''}</span>
               </p>
             </div>
             <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center">
@@ -73,16 +120,16 @@ const Stats: React.FC = () => {
     // Influencer stats
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card p-6 hover-lift transition-all duration-300 border-l-4 border-primary">
+        <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300 border-l-4 border-primary">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Active Collaborations</h4>
-              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">5</p>
+              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">{influencerStats?.activeCollaborations || 0}</p>
               <p className="text-sm font-medium text-green-500 mt-2 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
-                <span>+1 from last week</span>
+                <span>+{influencerStats?.collaborationsChange || 0} from last week</span>
               </p>
             </div>
             <div className="w-12 h-12 bg-primary-light/20 rounded-full flex items-center justify-center">
@@ -93,16 +140,16 @@ const Stats: React.FC = () => {
           </div>
         </div>
 
-        <div className="card p-6 hover-lift transition-all duration-300 border-l-4 border-secondary">
+        <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300 border-l-4 border-secondary">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Earnings This Month</h4>
-              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">₹42,500</p>
+              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">₹{influencerStats ? influencerStats.earningsThisMonth.toLocaleString() : '0'}</p>
               <p className="text-sm font-medium text-green-500 mt-2 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
-                <span>+₹8,200 from last month</span>
+                <span>+₹{influencerStats ? influencerStats.earningsChange.toLocaleString() : '0'} from last month</span>
               </p>
             </div>
             <div className="w-12 h-12 bg-secondary-light/20 rounded-full flex items-center justify-center">
@@ -113,16 +160,16 @@ const Stats: React.FC = () => {
           </div>
         </div>
 
-        <div className="card p-6 hover-lift transition-all duration-300 border-l-4 border-accent">
+        <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300 border-l-4 border-accent">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Follower Growth</h4>
-              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">+12%</p>
+              <p className="text-3xl font-display font-bold text-gray-900 dark:text-white">+{influencerStats?.followerGrowth || 0}%</p>
               <p className="text-sm font-medium text-green-500 mt-2 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
-                <span>+3.2% from last month</span>
+                <span>+{influencerStats?.followerGrowthChange || 0}% from last month</span>
               </p>
             </div>
             <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center">

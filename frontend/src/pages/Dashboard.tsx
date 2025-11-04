@@ -42,7 +42,7 @@ const Dashboard: React.FC = () => {
             {user?.role === 'brand' ? (
               // Brand-specific sidebar
               <div className="space-y-6">
-                <div className="card p-6">
+                <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300">
                   <h3 className="text-xl font-display font-semibold text-gray-900 dark:text-white mb-4">
                     Brand Profile
                   </h3>
@@ -54,7 +54,7 @@ const Dashboard: React.FC = () => {
                   </Link>
                 </div>
                 
-                <div className="card p-6">
+                <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300">
                   <h3 className="text-xl font-display font-semibold text-gray-900 dark:text-white mb-4">
                     Sponsorships
                   </h3>
@@ -69,7 +69,7 @@ const Dashboard: React.FC = () => {
                   </Link>
                 </div>
                 
-                <div className="card p-6">
+                <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300">
                   <h3 className="text-xl font-display font-semibold text-gray-900 dark:text-white mb-4">
                     Campaign Tips
                   </h3>
@@ -92,7 +92,7 @@ const Dashboard: React.FC = () => {
             ) : (
               // Influencer-specific sidebar
               <div className="space-y-6">
-                <div className="card p-6">
+                <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300">
                   <h3 className="text-xl font-display font-semibold text-gray-900 dark:text-white mb-4">
                     Upcoming Deadlines
                   </h3>
@@ -101,10 +101,15 @@ const Dashboard: React.FC = () => {
                   </p>
                 </div>
                 
-                <div className="card p-6">
-                  <h3 className="text-xl font-display font-semibold text-gray-900 dark:text-white mb-4">
-                    Performance Summary
-                  </h3>
+                <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-display font-semibold text-gray-900 dark:text-white">
+                      Performance Summary
+                    </h3>
+                    <Link to="/analytics" className="text-sm text-primary hover:text-primary-dark dark:hover:text-primary-light transition-colors">
+                      View Full
+                    </Link>
+                  </div>
                   <div className="space-y-3">
                     <div>
                       <div className="flex justify-between text-sm mb-1">
@@ -132,7 +137,7 @@ const Dashboard: React.FC = () => {
                   </Link>
                 </div>
                 
-                <div className="card p-6">
+                <div className="card p-6 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-all duration-300">
                   <h3 className="text-xl font-display font-semibold text-gray-900 dark:text-white mb-4">
                     Growth Tips
                   </h3>

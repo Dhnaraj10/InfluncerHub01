@@ -44,12 +44,16 @@ const PublicBrandProfile: React.FC = () => {
 
       try {
         setLoading(true);
-        const response = await axios.get<{ success: boolean; profile: BrandProfile }>(
+        const response = await axios.get<{ success: boolean; profile: BrandProfile } | BrandProfile>(
           `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands/${brandId}`
         );
         
-        if (response.data.success) {
+        // Handle both possible response formats
+        if ('success' in response.data && response.data.success && response.data.profile) {
           setBrandProfile(response.data.profile);
+        } else if (!('success' in response.data) && 'companyName' in response.data) {
+          // Direct profile object returned
+          setBrandProfile(response.data);
         } else {
           setError("Failed to load brand profile");
           toast.error("Failed to load brand profile");

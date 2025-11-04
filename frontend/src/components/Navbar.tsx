@@ -116,6 +116,29 @@ const Navbar: React.FC = () => {
                 >
                   Search
                 </Link>
+                
+                {/* Messages icon */}
+                <Link
+                  to="/messages"
+                  className="relative p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                    />
+                  </svg>
+                  {/* Notification badge - in a real app, this would be dynamic */}
+                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800"></span>
+                </Link>
 
                 {/* Profile dropdown */}
                 <div className="ml-3 relative" ref={profileMenuRef}>
@@ -281,6 +304,38 @@ const Navbar: React.FC = () => {
                 >
                   Search
                 </Link>
+                
+                {/* Messages icon for mobile */}
+                <Link
+                  to="/messages"
+                  onClick={closeMenu}
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${
+                    isActive("/messages")
+                      ? "bg-primary-light/20 text-primary-dark dark:text-primary-light"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 mr-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                    />
+                  </svg>
+                  Messages
+                  {/* Notification badge - in a real app, this would be dynamic */}
+                  <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-red-500 text-xs text-white">
+                    3
+                  </span>
+                </Link>
+                
                 <Link
                   to={user?.role === "brand" ? "/brand-profile" : "/profile"}
                   onClick={closeMenu}

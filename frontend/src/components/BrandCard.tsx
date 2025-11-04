@@ -144,9 +144,12 @@ const BrandCard: React.FC<BrandCardProps> = ({ brand }) => {
           </Link>
           
           {user?.role === "influencer" && (
-            <button className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-medium text-center hover:opacity-90 transition shadow-lg">
+            <Link 
+              to={`/contact-brand/${brandProfileId}`}
+              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-medium text-center hover:opacity-90 transition shadow-lg"
+            >
               Contact
-            </button>
+            </Link>
           )}
         </div>
       </div>

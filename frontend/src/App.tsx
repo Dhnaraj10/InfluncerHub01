@@ -29,6 +29,7 @@ import TermsPage from "./pages/Terms";
 import CookiesPage from "./pages/Cookies";
 import ForBrandsPage from "./pages/ForBrands";
 import ForInfluencersPage from "./pages/ForInfluencers";
+import ContactBrandPage from "./pages/ContactBrandPage";
 
 function App() {
   return (
@@ -49,15 +50,7 @@ function App() {
           <Route path="/sponsorships/:id" element={<SponsorshipDetailPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/blog" element={<BlogPage />} />
-          <Route path="/careers" element={<CareersPage />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/cookies" element={<CookiesPage />} />
+          <Route path="/contact-brand/:id" element={<ContactBrandPage />} />
           <Route path="/brands" element={<ForBrandsPage />} />
           <Route path="/influencers" element={<ForInfluencersPage />} />
           <Route path="*" element={<NotFoundPage />} />

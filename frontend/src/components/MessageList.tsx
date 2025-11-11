@@ -1,5 +1,5 @@
 // frontend/src/components/MessageList.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import axios from "axios";
@@ -21,7 +21,7 @@ const MessageList: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Load conversations
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     if (!token) return;
     
     try {
@@ -41,7 +41,7 @@ const MessageList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     // Load initial conversations

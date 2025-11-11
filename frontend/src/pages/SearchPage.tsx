@@ -44,11 +44,7 @@ const SearchPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   // Load initial results when page loads or search type changes
-  useEffect(() => {
-    loadInitialResults();
-  }, [searchType]);
-
-  const loadInitialResults = async () => {
+  const loadInitialResults = useCallback(async () => {
     setLoading(true);
     try {
       if (searchType === 'influencers') {
@@ -60,12 +56,16 @@ const SearchPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Error loading initial results:', err);
-      toast.error(err.message || 'Failed to load results');
-      setResults([]); // Ensure results is always an array
+      toast.error('Failed to load results');
+      setResults([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchType]);
+
+  useEffect(() => {
+    loadInitialResults();
+  }, [searchType, loadInitialResults]);
 
   const performSearch = async (formData: SearchFormValues) => {
     setLoading(true);

@@ -24,7 +24,6 @@ interface BrandProfileData {
 const BrandProfile: React.FC = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [profileExists, setProfileExists] = useState(false);

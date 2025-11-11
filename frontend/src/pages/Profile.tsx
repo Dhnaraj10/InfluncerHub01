@@ -1,5 +1,5 @@
 // frontend/src/pages/Profile.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { useAuth } from "../useAuth";
@@ -54,6 +54,162 @@ const Profile: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
   const [initialProfileData, setInitialProfileData] = useState<ProfileFormValues | null>(null);
+
+  // Memoized functions to prevent unnecessary re-renders
+  const addCategory = useCallback(() => {
+    const trimmed = categoryInput.trim();
+    if (trimmed) {
+      const currentCategories = getValues("categories") || [];
+      if (!currentCategories.includes(trimmed)) {
+        setValue("categories", [...currentCategories, trimmed]);
+        setCategoryInput("");
+      }
+    }
+  }, [categoryInput, getValues, setValue]);
+
+  const addTag = useCallback(() => {
+    const trimmed = tagInput.trim();
+    if (trimmed) {
+      const currentTags = getValues("tags") || [];
+      if (!currentTags.includes(trimmed)) {
+        setValue("tags", [...currentTags, trimmed]);
+        setTagInput("");
+      }
+    }
+  }, [tagInput, getValues, setValue]);
+
+  const handleAvatarUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const file = files[0];
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.msg || `Failed to upload avatar: ${res.status} ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      setValue("avatarUrl", data.url);
+      setAvatarPreview(data.url);
+      toast.success("Avatar uploaded successfully!");
+    } catch (err: any) {
+      console.error("Avatar upload error:", err);
+      toast.error(err.message || "Could not upload avatar");
+    } finally {
+      setUploading(false);
+      // Reset the file input so the same file can be uploaded again if needed
+      e.target.value = '';
+    }
+  }, [token, setValue]);
+
+  const handlePortfolioUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+
+    try {
+      const urls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append("image", files[i]);
+
+        const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.msg || `Failed to upload image ${i + 1}: ${res.status} ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        urls.push(data.url);
+      }
+
+      const currentPortfolio = getValues("portfolio") || [];
+      setValue("portfolio", [...currentPortfolio, ...urls]);
+      toast.success(`${files.length} image(s) uploaded successfully!`);
+    } catch (err: any) {
+      console.error("Portfolio upload error:", err);
+      toast.error(err.message || "Could not upload portfolio images");
+    } finally {
+      setUploading(false);
+      // Reset the file input so the same file can be uploaded again if needed
+      e.target.value = '';
+    }
+  }, [token, getValues, setValue]);
+
+  const removeImage = useCallback((index: number) => {
+    const currentPortfolio = getValues("portfolio") || [];
+    const newPortfolio = currentPortfolio.filter((_, i) => i !== index);
+    setValue("portfolio", newPortfolio);
+  }, [getValues, setValue]);
+
+  const removeCategory = useCallback((categoryToRemove: string) => {
+    const currentCategories = getValues("categories") || [];
+    setValue("categories", currentCategories.filter((cat) => cat !== categoryToRemove));
+  }, [getValues, setValue]);
+
+  const removeTag = useCallback((tagToRemove: string) => {
+    const currentTags = getValues("tags") || [];
+    setValue("tags", currentTags.filter((tag) => tag !== tagToRemove));
+  }, [getValues, setValue]);
+
+  const handleCancel = useCallback(() => {
+    if (initialProfileData) {
+      reset(initialProfileData);
+      setAvatarPreview(initialProfileData.avatarUrl || null);
+    }
+    setIsEditMode(false);
+  }, [initialProfileData, reset]);
+
+  const handleDelete = useCallback(async () => {
+    if (!window.confirm("Are you sure you want to delete your profile?")) return;
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/me`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to delete profile");
+      toast.success("Profile deleted successfully!");
+      reset({
+        handle: "",
+        bio: "",
+        categories: [],
+        followerCount: 0,
+        instagram: "",
+        youtube: "",
+        twitter: "",
+        tiktok: "",
+        other: "",
+        location: "",
+        avatarUrl: "",
+        portfolio: [],
+        tags: [],
+        averageEngagementRate: 0,
+        pricing: {},
+      });
+      setAvatarPreview(null);
+      setIsEditMode(true);
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete profile");
+    }
+  }, [token, reset]);
 
   // Format currency
   const currencySymbol = () => "₹";
@@ -253,7 +409,7 @@ const Profile: React.FC = () => {
   };
 
   // Handle form submission
-  const onSubmit = async (data: ProfileFormValues) => {
+  const onSubmit = useCallback(async (data: ProfileFormValues) => {
     try {
       // Send social links as individual fields (not nested) to match backend expectations
       const profileData = {
@@ -282,7 +438,7 @@ const Profile: React.FC = () => {
     } catch (err: any) {
       toast.error(err.message || "Could not save profile");
     }
-  };
+  }, [profileExists, token]);
 
   // Handle cancel
   const handleCancel = () => {
@@ -328,7 +484,7 @@ const Profile: React.FC = () => {
   };
 
   // Format followers count
-  const formatFollowers = (count: number) => {
+  const formatFollowers = useCallback((count: number) => {
     if (count >= 1000000) {
       return `${(count / 1000000).toFixed(1)}M`;
     }
@@ -336,7 +492,7 @@ const Profile: React.FC = () => {
       return `${(count / 1000).toFixed(1)}K`;
     }
     return count.toString();
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background-light to-white dark:from-gray-900 dark:to-gray-900 py-12 px-4">

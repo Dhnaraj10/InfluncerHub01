@@ -1,5 +1,5 @@
 // frontend/src/components/MessageRequests.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../useAuth";
 import axios from "axios";
 import websocketService from "../services/websocket";
@@ -22,7 +22,7 @@ const MessageRequests: React.FC = () => {
   const navigate = useNavigate();
 
   // Load requests
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     if (!token) return;
     
     try {
@@ -41,7 +41,7 @@ const MessageRequests: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     loadRequests();

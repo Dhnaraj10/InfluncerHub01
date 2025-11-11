@@ -21,21 +21,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Track network status
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   // Load user if token exists
   useEffect(() => {
@@ -49,13 +35,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) {
-            setUser(data);
+            setUser(data.user);
             setIsAuthenticated(true);
           } else {
-            setUser(null);
-            setIsAuthenticated(false);
-            setToken(null);
+            // Token is invalid, clear it
             localStorage.removeItem("token");
+            setToken(null);
           }
         })
         .catch(() => {

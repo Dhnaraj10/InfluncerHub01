@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../useAuth';
 import { getInfluencerStats, getBrandStats, DashboardStats, BrandDashboardStats } from '../services/analytics';
-import { getInfluencerSponsorships, getBrandSponsorships } from '../services/sponsorship';
 
 const Stats: React.FC = () => {
   const { user, token } = useAuth();
@@ -31,7 +30,7 @@ const Stats: React.FC = () => {
     };
 
     fetchStats();
-  }, [token, user?.role]);
+  }, [token, user]);
 
   if (loading) {
     return (

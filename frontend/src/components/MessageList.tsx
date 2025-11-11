@@ -20,6 +20,29 @@ const MessageList: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Load conversations
+  const loadConversations = async () => {
+    if (!token) return;
+    
+    try {
+      setLoading(true);
+      // Fetch real conversations from the backend
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages/conversations`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      setConversations(res.data);
+    } catch (err) {
+      console.error("Error loading conversations:", err);
+      setConversations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Load initial conversations
     loadConversations();
@@ -68,29 +91,7 @@ const MessageList: React.FC = () => {
     return () => {
       websocketService.removeMessageListener(handleNewMessage);
     };
-  }, [token, user]);
-
-  const loadConversations = async () => {
-    if (!token) return;
-    
-    try {
-      setLoading(true);
-      // Fetch real conversations from the backend
-      const res = await axios.get(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages/conversations`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      
-      setConversations(res.data);
-    } catch (err) {
-      console.error("Error loading conversations:", err);
-      setConversations([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [token, user, loadConversations]);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);

@@ -1,7 +1,7 @@
 // frontend/src/pages/BrandProfile.tsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../useAuth";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { FaInstagram, FaTwitter, FaLinkedin, FaLink } from 'react-icons/fa';

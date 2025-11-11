@@ -21,24 +21,7 @@ const MessageRequests: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadRequests();
-    
-    // Listen for new message requests
-    const handleWebSocketMessage = (message: any) => {
-      if (message.type === 'messageRequest') {
-        // Add new request to the list
-        setRequests(prev => [...prev, message.data]);
-      }
-    };
-    
-    websocketService.addMessageListener(handleWebSocketMessage);
-    
-    return () => {
-      websocketService.removeMessageListener(handleWebSocketMessage);
-    };
-  }, [token]);
-
+  // Load requests
   const loadRequests = async () => {
     if (!token) return;
     
@@ -59,6 +42,24 @@ const MessageRequests: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadRequests();
+    
+    // Listen for new message requests
+    const handleWebSocketMessage = (message: any) => {
+      if (message.type === 'messageRequest') {
+        // Add new request to the list
+        setRequests(prev => [...prev, message.data]);
+      }
+    };
+    
+    websocketService.addMessageListener(handleWebSocketMessage);
+    
+    return () => {
+      websocketService.removeMessageListener(handleWebSocketMessage);
+    };
+  }, [token, loadRequests]);
 
   const handleAccept = async (requestId: string, fromUserId: string) => {
     if (!token) return;

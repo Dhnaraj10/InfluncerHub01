@@ -3,8 +3,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Sponsorship } from "../types/types";
 import { useAuth } from "../useAuth";
 import toast from "react-hot-toast";
-import { FaPlus, FaEye, FaFilter } from "react-icons/fa";
-import { useNavigate, Link } from "react-router-dom";
+import { FaPlus, FaEye } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 // Create a partial interface for API responses that might be missing some fields
 interface PartialSponsorship extends Omit<Sponsorship, 'updatedAt'> {

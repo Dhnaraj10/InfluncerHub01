@@ -1,7 +1,7 @@
 // frontend/src/components/BrandCard.tsx
 import React, { useContext } from "react";
 import { Link } from "react-router-dom";
-import { AuthContext, AuthContextType } from "../AuthContext";
+import { AuthContext } from "../AuthContext";
 import { FaInstagram, FaTwitter, FaLinkedin, FaLink } from 'react-icons/fa';
 import { BrandProfile } from "../types/types";
 

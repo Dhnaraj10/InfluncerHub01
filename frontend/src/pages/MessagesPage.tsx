@@ -1,5 +1,5 @@
 // frontend/src/pages/MessagesPage.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../useAuth";
 import { useLocation, useNavigate } from "react-router-dom";
 import websocketService from "../services/websocket";
@@ -42,6 +42,29 @@ const MessagesPage: React.FC = () => {
     }
   }, [location.search]);
 
+  // Load messages
+  const loadMessages = useCallback(async () => {
+    if (!token || !recipient) return;
+    
+    try {
+      setLoading(true);
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages?recipient=${recipient.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      setMessages(res.data);
+    } catch (err) {
+      console.error("Error loading messages:", err);
+      // Fallback to empty array
+      setMessages([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, recipient]);
+
   // Connect to WebSocket
   useEffect(() => {
     if (token) {
@@ -58,7 +81,7 @@ const MessagesPage: React.FC = () => {
     return () => {
       // Cleanup if needed
     };
-  }, [token, recipient]);
+  }, [token, recipient, loadMessages]);
 
   // Handle WebSocket messages
   useEffect(() => {
@@ -94,30 +117,7 @@ const MessagesPage: React.FC = () => {
     return () => {
       websocketService.removeMessageListener(handleWebSocketMessage);
     };
-  }, [recipient, user]);
-
-  // Load messages
-  const loadMessages = async () => {
-    if (!token || !recipient) return;
-    
-    try {
-      setLoading(true);
-      const res = await axios.get(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages?recipient=${recipient.id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      
-      setMessages(res.data);
-    } catch (err) {
-      console.error("Error loading messages:", err);
-      // Fallback to empty array
-      setMessages([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [recipient, user, loadMessages]);
 
   // Scroll to bottom of messages
   useEffect(() => {

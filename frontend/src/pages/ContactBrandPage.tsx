@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../useAuth";
-import axios from "axios";
 import toast from "react-hot-toast";
 
 interface Brand {
@@ -15,7 +14,7 @@ interface Brand {
 
 const ContactBrandPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
   const [brand, setBrand] = useState<Brand | null>(null);
   const [loading, setLoading] = useState(true);

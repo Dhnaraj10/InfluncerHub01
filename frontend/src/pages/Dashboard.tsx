@@ -1,14 +1,13 @@
 // frontend/src/pages/Dashboard.tsx
 import React from "react";
 import { useAuth } from "../useAuth";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Stats from "../components/Stats";
 import QuickActions from "../components/QuickActions";
 import RecentActivity from "../components/RecentActivity";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">

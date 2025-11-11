@@ -1,7 +1,7 @@
 // frontend/src/components/InfluencerCard.tsx
 import React, { useContext } from "react";
 import { Link } from "react-router-dom";
-import { AuthContext, AuthContextType } from "../AuthContext";
+import { AuthContext } from "../AuthContext";
 import { FaInstagram, FaYoutube, FaTwitter, FaTiktok } from 'react-icons/fa';
 
 interface InfluencerCardProps {

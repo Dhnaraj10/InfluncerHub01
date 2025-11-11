@@ -71,6 +71,9 @@ router.get("/", auth, async (req, res) => {
     // Format messages for frontend
     const formattedMessages = userMessages.map(msg => ({
       ...msg.toObject(),
+      id: msg._id.toString(),
+      senderId: msg.sender._id.toString(),
+      recipientId: msg.recipient._id.toString(),
       senderName: msg.sender.name,
       recipientName: msg.recipient.name
     }));
@@ -138,10 +141,10 @@ router.get("/conversations", auth, async (req, res) => {
           userName: partnerName,
           lastMessage: message.content,
           timestamp: message.timestamp,
-          unreadCount: message.recipient && message.recipient.toString() === req.user.id && !message.status ? 
+          unreadCount: message.recipient && message.recipient.toString() === req.user.id && message.status !== 'read' ? 
             (conversations[partnerId] ? conversations[partnerId].unreadCount + 1 : 1) : 0
         };
-      } else if (message.recipient && message.recipient.toString() === req.user.id && !message.status) {
+      } else if (message.recipient && message.recipient.toString() === req.user.id && message.status !== 'read') {
         // Increment unread count for received messages
         conversations[partnerId].unreadCount += 1;
       }
@@ -167,18 +170,36 @@ router.post("/", auth, async (req, res) => {
       return res.status(400).json({ error: "Content and recipientId are required" });
     }
     
+    // Ensure we have a proper recipient ID (not an object)
+    let properRecipientId = recipientId;
+    if (typeof recipientId === 'object' && recipientId !== null) {
+      // If recipientId is an object, try to extract the _id property
+      properRecipientId = recipientId._id ? recipientId._id.toString() : recipientId.id ? recipientId.id.toString() : null;
+    } else if (typeof recipientId === 'string' && recipientId.match(/ObjectId\(/)) {
+      // If it's a string representation of an ObjectId, extract the ID
+      const match = recipientId.match(/'([^']+)'/);
+      if (match && match[1]) {
+        properRecipientId = match[1];
+      }
+    }
+    
+    // Validate recipientId
+    if (!properRecipientId) {
+      return res.status(400).json({ error: "Valid recipient ID is required" });
+    }
+    
     // Check if there's a connection between users
     const connection = await UserConnection.findOne({
       $or: [
-        { user1: req.user.id, user2: recipientId },
-        { user1: recipientId, user2: req.user.id }
+        { user1: req.user.id, user2: properRecipientId },
+        { user1: properRecipientId, user2: req.user.id }
       ]
     });
     
     // Check if there's an existing message request
     const existingRequest = await MessageRequest.findOne({
       from: req.user.id,
-      to: recipientId,
+      to: properRecipientId,
       status: 'pending'
     });
     
@@ -186,8 +207,8 @@ router.post("/", auth, async (req, res) => {
     const Sponsorship = (await import('../models/Sponsorship.js')).default;
     const sponsorship = await Sponsorship.findOne({
       $or: [
-        { brand: req.user.id, influencer: recipientId },
-        { brand: recipientId, influencer: req.user.id }
+        { brand: req.user.id, influencer: properRecipientId },
+        { brand: properRecipientId, influencer: req.user.id }
       ],
       status: { $in: ['accepted', 'pending'] } // Only active sponsorships
     });
@@ -199,13 +220,14 @@ router.post("/", auth, async (req, res) => {
       if (!existingRequest) {
         const request = new MessageRequest({
           from: req.user.id,
-          to: recipientId,
+          to: properRecipientId,
           content: content
         });
         
         await request.save();
         return res.status(201).json({ 
           ...request.toObject(), 
+          id: request._id.toString(),
           type: 'request',
           message: 'Message request sent successfully' 
         });
@@ -219,7 +241,7 @@ router.post("/", auth, async (req, res) => {
     // If there's a connection or sponsorship, send the message normally
     const message = new Message({
       sender: req.user.id,
-      recipient: recipientId,
+      recipient: properRecipientId,
       content: content
     });
     
@@ -227,8 +249,17 @@ router.post("/", auth, async (req, res) => {
     
     // Populate sender info for response
     await message.populate('sender', 'name');
+    await message.populate('recipient', 'name');
     
-    res.status(201).json({ ...message.toObject(), type: 'message' });
+    res.status(201).json({ 
+      ...message.toObject(), 
+      id: message._id.toString(),
+      senderId: message.sender._id.toString(),
+      recipientId: message.recipient._id.toString(),
+      senderName: message.sender.name,
+      recipientName: message.recipient.name,
+      type: 'message' 
+    });
   } catch (err) {
     console.error("Error sending message:", err);
     res.status(500).json({ error: "Failed to send message" });
@@ -241,8 +272,15 @@ router.get("/requests", auth, async (req, res) => {
     const requests = await MessageRequest.find({ 
       to: req.user.id,
       status: 'pending'
-    });
-    res.json(requests);
+    }).populate('from', 'name');
+    
+    const formattedRequests = requests.map(req => ({
+      ...req.toObject(),
+      id: req._id.toString(),
+      senderName: req.from.name
+    }));
+    
+    res.json(formattedRequests);
   } catch (err) {
     console.error("Error fetching message requests:", err);
     res.status(500).json({ error: "Failed to fetch message requests" });
@@ -309,6 +347,9 @@ router.post("/requests/:requestId/accept", auth, async (req, res) => {
       message: "Message request accepted", 
       firstMessage: {
         ...message.toObject(),
+        id: message._id.toString(),
+        senderId: message.sender._id.toString(),
+        recipientId: message.recipient._id.toString(),
         senderName: message.sender.name,
         recipientName: message.recipient.name
       }

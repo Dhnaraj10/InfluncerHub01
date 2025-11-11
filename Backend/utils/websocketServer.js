@@ -153,6 +153,25 @@ export const initializeWebSocketServer = (server) => {
           // Handle message request
           const { content, recipientId } = message.data;
           
+          // Ensure we have a proper recipient ID (not an object)
+          let properRecipientId = recipientId;
+          if (typeof recipientId === 'object' && recipientId !== null) {
+            // If recipientId is an object, try to extract the _id property
+            properRecipientId = recipientId._id ? recipientId._id.toString() : recipientId.id ? recipientId.id.toString() : null;
+          } else if (typeof recipientId === 'string' && recipientId.match(/ObjectId\(/)) {
+            // If it's a string representation of an ObjectId, extract the ID
+            const match = recipientId.match(/'([^']+)'/);
+            if (match && match[1]) {
+              properRecipientId = match[1];
+            }
+          }
+          
+          // Validate recipientId
+          if (!properRecipientId) {
+            console.error("Invalid recipientId for message request:", recipientId);
+            return;
+          }
+          
           // Add sender info
           message.data.senderId = ws.userId;
           message.data.timestamp = new Date().toISOString();
@@ -161,7 +180,7 @@ export const initializeWebSocketServer = (server) => {
           try {
             const dbRequest = new MessageRequest({
               from: ws.userId,
-              to: recipientId,
+              to: properRecipientId,
               content: content
             });
             await dbRequest.save();
@@ -175,7 +194,7 @@ export const initializeWebSocketServer = (server) => {
           }
           
           // Find recipient WebSocket
-          const recipientWs = clients.get(recipientId);
+          const recipientWs = clients.get(properRecipientId);
           
           // Send request notification to recipient if online
           if (recipientWs && recipientWs.readyState === recipientWs.OPEN) {
@@ -193,10 +212,23 @@ export const initializeWebSocketServer = (server) => {
             }));
           }
           
-          console.log(`Message request from ${ws.userId} to ${recipientId}: ${content}`);
+          console.log(`Message request from ${ws.userId} to ${properRecipientId}: ${content}`);
         } else if (message.type === 'requestAccepted' && ws.userId) {
           // Handle request acceptance
           const { requestId, fromUserId } = message.data;
+          
+          // Ensure we have a proper fromUserId
+          let properFromUserId = fromUserId;
+          if (typeof fromUserId === 'object' && fromUserId !== null) {
+            // If fromUserId is an object, try to extract the _id property
+            properFromUserId = fromUserId._id ? fromUserId._id.toString() : fromUserId.id ? fromUserId.id.toString() : null;
+          } else if (typeof fromUserId === 'string' && fromUserId.match(/ObjectId\(/)) {
+            // If it's a string representation of an ObjectId, extract the ID
+            const match = fromUserId.match(/'([^']+)'/);
+            if (match && match[1]) {
+              properFromUserId = match[1];
+            }
+          }
           
           try {
             // Update request status in database
@@ -226,7 +258,7 @@ export const initializeWebSocketServer = (server) => {
           }
           
           // Notify the requester
-          const requesterWs = clients.get(fromUserId);
+          const requesterWs = clients.get(properFromUserId);
           if (requesterWs && requesterWs.readyState === requesterWs.OPEN) {
             requesterWs.send(JSON.stringify({
               type: 'requestAccepted',

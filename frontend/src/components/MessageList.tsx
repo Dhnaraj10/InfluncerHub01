@@ -46,9 +46,9 @@ const MessageList: React.FC = () => {
           } else {
             // Add new conversation
             updated.unshift({
-              id: Date.now().toString(),
+              id: message.data.senderId === user?._id ? message.data.recipientId : message.data.senderId,
               userId: message.data.senderId === user?._id ? message.data.recipientId : message.data.senderId,
-              userName: message.data.senderId === user?._id ? "You" : message.data.senderName,
+              userName: message.data.senderId === user?._id ? message.data.recipientName : message.data.senderName,
               lastMessage: message.data.content,
               timestamp: message.data.timestamp,
               unreadCount: message.data.senderId === user?._id ? 0 : 1

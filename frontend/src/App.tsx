@@ -50,6 +50,7 @@ function App() {
           <Route path="/sponsorships/:id" element={<SponsorshipDetailPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/contact-brand/:id" element={<ContactBrandPage />} />
           <Route path="/brands" element={<ForBrandsPage />} />
           <Route path="/influencers" element={<ForInfluencersPage />} />

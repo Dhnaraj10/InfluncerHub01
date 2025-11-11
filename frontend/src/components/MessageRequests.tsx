@@ -84,8 +84,8 @@ const MessageRequests: React.FC = () => {
       // Redirect to messages with the newly connected user
       if (res.data.firstMessage) {
         const message = res.data.firstMessage;
-        const otherUserId = message.sender._id === user?._id ? message.recipient : message.sender._id;
-        const otherUserName = message.sender._id === user?._id ? message.recipientName : message.sender.name;
+        const otherUserId = message.senderId === user?._id ? message.recipientId : message.senderId;
+        const otherUserName = message.senderId === user?._id ? message.recipientName : message.senderName;
         navigate(`/messages?recipient=${otherUserId}&name=${encodeURIComponent(otherUserName || 'Unknown User')}`);
       }
     } catch (err) {

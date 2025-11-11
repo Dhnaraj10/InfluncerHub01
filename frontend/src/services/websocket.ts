@@ -16,6 +16,8 @@ class WebSocketService {
       this.ws.close();
     }
 
+    this.token = token;
+
     // Determine WebSocket URL based on current environment
     let wsUrl: string;
     

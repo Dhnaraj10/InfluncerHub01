@@ -12,6 +12,7 @@ interface Message {
   senderId: string;
   senderName: string;
   recipientId: string;
+  recipientName: string;
   content: string;
   timestamp: string;
   status?: string;

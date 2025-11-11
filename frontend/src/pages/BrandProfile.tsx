@@ -58,20 +58,38 @@ const BrandProfile: React.FC = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       if (!token || user?.role !== "brand") return;
+      
       try {
         const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/brands/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        
         if (res.status === 404) {
+          // No profile exists yet, enable edit mode
           setIsEditMode(true);
           setProfileExists(false);
           setLoading(false);
           return;
         }
-        if (!res.ok) throw new Error("Failed to load profile");
+        
+        if (!res.ok) {
+          throw new Error(`Failed to load profile: ${res.status} ${res.statusText}`);
+        }
 
         const data = await res.json();
-        const profileData = data.profile || data; // Handle both response formats
+        
+        // Handle different response formats
+        let profileData;
+        if (data.profile) {
+          // Response with profile wrapper
+          profileData = data.profile;
+        } else if (data.companyName || data.industry || data.contactEmail) {
+          // Direct profile object
+          profileData = data;
+        } else {
+          // No recognizable profile data
+          throw new Error("Invalid profile data format");
+        }
         
         const formattedProfileData: BrandProfileData = {
           companyName: profileData.companyName || "",
@@ -93,9 +111,12 @@ const BrandProfile: React.FC = () => {
         setLogoPreview(formattedProfileData.logoUrl || null);
         setProfileExists(true);
         setIsEditMode(false);
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to load profile");
+      } catch (err: any) {
+        console.error("Error fetching brand profile:", err);
+        // If there's an error, we might not have a profile yet
+        setProfileExists(false);
+        setIsEditMode(true);
+        toast.error(err.message || "Failed to load profile");
       } finally {
         setLoading(false);
       }
@@ -140,10 +161,10 @@ const BrandProfile: React.FC = () => {
   };
 
   // Remove logo
-  const removeLogo = () => {
-    setLogoPreview(null);
-    setValue("logoUrl", "");
-  };
+  // const removeLogo = () => {
+  //   setLogoPreview(null);
+  //   setValue("logoUrl", "");
+  // };
 
   // Handle form submission
   const onSubmit = async (data: BrandProfileData) => {
@@ -300,8 +321,12 @@ const BrandProfile: React.FC = () => {
               <div>
                 <div className="flex justify-between items-start mb-6">
                   <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{initialProfileData?.companyName}</h1>
-                    <p className="text-gray-600 dark:text-gray-300">{initialProfileData?.industry}</p>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                      {initialProfileData?.companyName || "Company Name"}
+                    </h1>
+                    <p className="text-gray-600 dark:text-gray-300">
+                      {initialProfileData?.industry || "Industry"}
+                    </p>
                   </div>
                   <button 
                     onClick={() => setIsEditMode(true)}

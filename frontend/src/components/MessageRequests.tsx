@@ -13,12 +13,15 @@ interface MessageRequest {
   timestamp: string;
   status: string;
   senderName?: string;
+  recipientName?: string;
 }
 
 const MessageRequests: React.FC = () => {
-  const { user, token } = useAuth();
-  const [requests, setRequests] = useState<MessageRequest[]>([]);
+  const { token } = useAuth();
+  const [incomingRequests, setIncomingRequests] = useState<MessageRequest[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<MessageRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"incoming" | "outgoing">("incoming");
   const navigate = useNavigate();
 
   // Load requests
@@ -27,17 +30,29 @@ const MessageRequests: React.FC = () => {
     
     try {
       setLoading(true);
-      const res = await axios.get(
+      // Load incoming requests
+      const incomingRes = await axios.get(
         `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages/requests`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
       
-      setRequests(res.data);
+      setIncomingRequests(incomingRes.data);
+      
+      // Load outgoing requests
+      const outgoingRes = await axios.get(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages/requests/sent`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      setOutgoingRequests(outgoingRes.data);
     } catch (err) {
       console.error("Error loading message requests:", err);
-      setRequests([]);
+      setIncomingRequests([]);
+      setOutgoingRequests([]);
     } finally {
       setLoading(false);
     }
@@ -49,8 +64,7 @@ const MessageRequests: React.FC = () => {
     // Listen for new message requests
     const handleWebSocketMessage = (message: any) => {
       if (message.type === 'messageRequest') {
-        // Add new request to the list
-        setRequests(prev => [...prev, message.data]);
+        loadRequests();
       }
     };
     
@@ -59,36 +73,25 @@ const MessageRequests: React.FC = () => {
     return () => {
       websocketService.removeMessageListener(handleWebSocketMessage);
     };
-  }, [token, loadRequests]);
+  }, [loadRequests]);
 
-  const handleAccept = async (requestId: string, fromUserId: string) => {
+  const handleAccept = async (requestId: string, senderId: string) => {
     if (!token) return;
     
     try {
-      const res = await axios.post(
+      await axios.post(
         `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/messages/requests/${requestId}/accept`,
-        {},
+        { senderId },
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
       
       // Remove the request from the list
-      setRequests(prev => prev.filter(req => req.id !== requestId));
+      setIncomingRequests(prev => prev.filter(req => req.id !== requestId));
       
-      // Notify via WebSocket
-      websocketService.send({
-        type: 'requestAccepted',
-        data: { requestId, fromUserId }
-      });
-      
-      // Redirect to messages with the newly connected user
-      if (res.data.firstMessage) {
-        const message = res.data.firstMessage;
-        const otherUserId = message.senderId === user?._id ? message.recipientId : message.senderId;
-        const otherUserName = message.senderId === user?._id ? message.recipientName : message.senderName;
-        navigate(`/messages?recipient=${otherUserId}&name=${encodeURIComponent(otherUserName || 'Unknown User')}`);
-      }
+      // Navigate to the conversation
+      navigate(`/messages?recipient=${senderId}`);
     } catch (err) {
       console.error("Error accepting message request:", err);
       alert("Failed to accept message request. Please try again.");
@@ -108,7 +111,7 @@ const MessageRequests: React.FC = () => {
       );
       
       // Remove the request from the list
-      setRequests(prev => prev.filter(req => req.id !== requestId));
+      setIncomingRequests(prev => prev.filter(req => req.id !== requestId));
     } catch (err) {
       console.error("Error rejecting message request:", err);
       alert("Failed to reject message request. Please try again.");
@@ -148,64 +151,153 @@ const MessageRequests: React.FC = () => {
   }
 
   return (
-    <div className="divide-y divide-gray-200 dark:divide-gray-700">
-      {requests.length === 0 ? (
-        <div className="p-8 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-            <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-          </div>
-          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No message requests</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            When someone wants to message you, their request will appear here.
-          </p>
-        </div>
-      ) : (
-        requests.map((request) => (
-          <div key={request.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary font-medium">
-                    {request.senderName?.charAt(0).toUpperCase() || "U"}
-                  </span>
-                </div>
+    <div>
+      {/* Tabs for incoming and outgoing requests */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="flex -mb-px">
+          <button
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+              activeTab === "incoming"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+            }`}
+            onClick={() => setActiveTab("incoming")}
+          >
+            Incoming Requests
+          </button>
+          <button
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+              activeTab === "outgoing"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+            }`}
+            onClick={() => setActiveTab("outgoing")}
+          >
+            Sent Requests
+          </button>
+        </nav>
+      </div>
+      
+      <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        {activeTab === "incoming" ? (
+          incomingRequests.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
               </div>
-              
-              <div className="ml-3 flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                    {request.senderName || "Unknown User"}
-                  </h3>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatTime(request.timestamp)}
-                  </span>
-                </div>
-                
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
-                  {request.content}
-                </p>
-                
-                <div className="flex space-x-3 mt-3">
-                  <button
-                    onClick={() => handleAccept(request.id, request.from)}
-                    className="px-3 py-1 bg-primary hover:bg-primary-dark text-white text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleReject(request.id)}
-                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 dark:text-white text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition"
-                  >
-                    Reject
-                  </button>
-                </div>
-              </div>
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No message requests</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                When someone wants to message you, their request will appear here.
+              </p>
             </div>
-          </div>
-        ))
-      )}
+          ) : (
+            incomingRequests.map((request) => (
+              <div key={request.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary font-medium">
+                        {request.senderName?.charAt(0).toUpperCase() || "U"}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="ml-3 flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                        {request.senderName || "Unknown User"}
+                      </h3>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatTime(request.timestamp)}
+                      </span>
+                    </div>
+                    
+                    <div className="mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Request message:
+                      </p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 truncate">
+                        {request.content}
+                      </p>
+                    </div>
+                    
+                    <div className="flex space-x-3 mt-3">
+                      <button
+                        onClick={() => handleAccept(request.id, request.from)}
+                        className="px-3 py-1 bg-primary hover:bg-primary-dark text-white text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleReject(request.id)}
+                        className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 dark:text-white text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )
+        ) : (
+          outgoingRequests.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No sent requests</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                When you send a message request, it will appear here.
+              </p>
+            </div>
+          ) : (
+            outgoingRequests.map((request) => (
+              <div key={request.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary font-medium">
+                        {request.recipientName?.charAt(0).toUpperCase() || "U"}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="ml-3 flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                        {request.recipientName || "Unknown User"}
+                      </h3>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatTime(request.timestamp)}
+                      </span>
+                    </div>
+                    
+                    <div className="mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Your message:
+                      </p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 truncate">
+                        {request.content}
+                      </p>
+                    </div>
+                    
+                    <div className="mt-3">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Pending
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )
+        )}
+      </div>
     </div>
   );
 };

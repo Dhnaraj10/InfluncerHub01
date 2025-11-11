@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../useAuth";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 interface LoginFormValues {
   email: string;
@@ -15,6 +16,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth(); // from your auth context
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = async (data: LoginFormValues) => {
     // Check network status first
@@ -77,13 +79,20 @@ const Login: React.FC = () => {
               <p className="mt-1 text-red-500 text-sm">{errors.email.message}</p>
             )}
           </div>
-          <div>
+          <div className="relative">
             <input
               {...register("password", { required: "Password is required" })}
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-primary outline-none"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 text-gray-400 focus:outline-none"
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
             {errors.password && (
               <p className="mt-1 text-red-500 text-sm">{errors.password.message}</p>
             )}

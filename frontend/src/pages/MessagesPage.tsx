@@ -321,9 +321,7 @@ const MessagesPage: React.FC = () => {
                     {dateMessages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex mb-4 ${
-                          message.senderId === user?._id ? "justify-end" : "justify-start"
-                        }`}
+                        className={`flex mb-4 ${message.senderId === user?._id ? "justify-end" : "justify-start"}`}
                       >
                         <div
                           className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-4 py-2 ${

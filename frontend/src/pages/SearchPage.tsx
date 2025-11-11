@@ -1,5 +1,5 @@
 // frontend/src/pages/SearchPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { InfluencerProfile, BrandProfile } from '../types/types';
 import InfluencerCard from '../components/InfluencerCard';

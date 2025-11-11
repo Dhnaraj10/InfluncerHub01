@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../useAuth";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 interface SignupFormValues {
   name: string;
@@ -17,6 +18,7 @@ const Signup: React.FC = () => {
   const navigate = useNavigate();
   const { signup } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = async (data: SignupFormValues) => {
     // Check network status first
@@ -75,18 +77,27 @@ const Signup: React.FC = () => {
             placeholder="Email"
             className="input w-full"
           />
-          <input
-            {...register("password", { 
-              required: "Password is required",
-              minLength: {
-                value: 6,
-                message: "Password must be at least 6 characters"
-              }
-            })}
-            type="password"
-            placeholder="Password"
-            className="input w-full"
-          />
+          <div className="relative">
+            <input
+              {...register("password", { 
+                required: "Password is required",
+                minLength: {
+                  value: 6,
+                  message: "Password must be at least 6 characters"
+                }
+              })}
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              className="input w-full"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 text-gray-600 dark:text-gray-400"
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </div>
 
           {/* Role selection */}
           <select 

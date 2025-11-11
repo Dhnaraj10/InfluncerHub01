@@ -6,10 +6,6 @@ import { useAuth } from "../useAuth";
 import toast from "react-hot-toast";
 import { FaInstagram, FaYoutube, FaTwitter, FaLink, FaMapMarkerAlt, FaTiktok } from 'react-icons/fa';
 
-const renderIcon = (IconComponent: React.ComponentType<any>, props: any) => {
-  return <IconComponent {...props} />;
-};
-
 interface ProfileFormValues {
   handle: string;
   bio: string;
@@ -178,38 +174,38 @@ const Profile: React.FC = () => {
     setIsEditMode(false);
   }, [initialProfileData, reset]);
 
-  const handleDelete = useCallback(async () => {
-    if (!window.confirm("Are you sure you want to delete your profile?")) return;
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/me`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to delete profile");
-      toast.success("Profile deleted successfully!");
-      reset({
-        handle: "",
-        bio: "",
-        categories: [],
-        followerCount: 0,
-        instagram: "",
-        youtube: "",
-        twitter: "",
-        tiktok: "",
-        other: "",
-        location: "",
-        avatarUrl: "",
-        portfolio: [],
-        tags: [],
-        averageEngagementRate: 0,
-        pricing: {},
-      });
-      setAvatarPreview(null);
-      setIsEditMode(true);
-    } catch (err: any) {
-      toast.error(err.message || "Could not delete profile");
-    }
-  }, [token, reset]);
+  // const handleDelete = useCallback(async () => {
+  //   if (!window.confirm("Are you sure you want to delete your profile?")) return;
+  //   try {
+  //     const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/me`, {
+  //       method: "DELETE",
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     if (!res.ok) throw new Error("Failed to delete profile");
+  //     toast.success("Profile deleted successfully!");
+  //     reset({
+  //       handle: "",
+  //       bio: "",
+  //       categories: [],
+  //       followerCount: 0,
+  //       instagram: "",
+  //       youtube: "",
+  //       twitter: "",
+  //       tiktok: "",
+  //       other: "",
+  //       location: "",
+  //       avatarUrl: "",
+  //       portfolio: [],
+  //       tags: [],
+  //       averageEngagementRate: 0,
+  //       pricing: {},
+  //     });
+  //     setAvatarPreview(null);
+  //     setIsEditMode(true);
+  //   } catch (err: any) {
+  //     toast.error(err.message || "Could not delete profile");
+  //   }
+  // }, [token, reset]);
 
   // Format currency
   const currencySymbol = () => "₹";
@@ -285,128 +281,7 @@ const Profile: React.FC = () => {
     };
 
     fetchProfile();
-  }, [token, reset]);
-
-  // Handle avatar upload
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setUploading(true);
-    const file = files[0];
-
-    try {
-      const formData = new FormData();
-      formData.append("image", file);
-
-      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.msg || `Failed to upload avatar: ${res.status} ${res.statusText}`);
-      }
-
-      const data = await res.json();
-      setValue("avatarUrl", data.url);
-      setAvatarPreview(data.url);
-      toast.success("Avatar uploaded successfully!");
-    } catch (err: any) {
-      console.error("Avatar upload error:", err);
-      toast.error(err.message || "Could not upload avatar");
-    } finally {
-      setUploading(false);
-      // Reset the file input so the same file can be uploaded again if needed
-      e.target.value = '';
-    }
-  };
-
-  // Handle portfolio upload
-  const handlePortfolioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setUploading(true);
-
-    try {
-      const urls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const formData = new FormData();
-        formData.append("image", files[i]);
-
-        const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.msg || `Failed to upload image ${i + 1}: ${res.status} ${res.statusText}`);
-        }
-        
-        const data = await res.json();
-        urls.push(data.url);
-      }
-
-      const currentPortfolio = getValues("portfolio") || [];
-      setValue("portfolio", [...currentPortfolio, ...urls]);
-      toast.success(`${files.length} image(s) uploaded successfully!`);
-    } catch (err: any) {
-      console.error("Portfolio upload error:", err);
-      toast.error(err.message || "Could not upload portfolio images");
-    } finally {
-      setUploading(false);
-      // Reset the file input so the same file can be uploaded again if needed
-      e.target.value = '';
-    }
-  };
-
-  // Remove image from portfolio
-  const removeImage = (index: number) => {
-    const currentPortfolio = getValues("portfolio") || [];
-    const newPortfolio = currentPortfolio.filter((_, i) => i !== index);
-    setValue("portfolio", newPortfolio);
-  };
-
-  // Add category
-  const addCategory = () => {
-    const trimmed = categoryInput.trim();
-    if (trimmed) {
-      const currentCategories = getValues("categories") || [];
-      if (!currentCategories.includes(trimmed)) {
-        setValue("categories", [...currentCategories, trimmed]);
-        setCategoryInput("");
-      }
-    }
-  };
-
-  // Remove category
-  const removeCategory = (categoryToRemove: string) => {
-    const currentCategories = getValues("categories") || [];
-    setValue("categories", currentCategories.filter((cat) => cat !== categoryToRemove));
-  };
-
-  // Add tag
-  const addTag = () => {
-    const trimmed = tagInput.trim();
-    if (trimmed) {
-      const currentTags = getValues("tags") || [];
-      if (!currentTags.includes(trimmed)) {
-        setValue("tags", [...currentTags, trimmed]);
-        setTagInput("");
-      }
-    }
-  };
-
-  // Remove tag
-  const removeTag = (tagToRemove: string) => {
-    const currentTags = getValues("tags") || [];
-    setValue("tags", currentTags.filter((tag) => tag !== tagToRemove));
-  };
+  }, [token, reset, navigate]);
 
   // Handle form submission
   const onSubmit = useCallback(async (data: ProfileFormValues) => {
@@ -439,49 +314,6 @@ const Profile: React.FC = () => {
       toast.error(err.message || "Could not save profile");
     }
   }, [profileExists, token]);
-
-  // Handle cancel
-  const handleCancel = () => {
-    if (initialProfileData) {
-      reset(initialProfileData);
-      setAvatarPreview(initialProfileData.avatarUrl || null);
-    }
-    setIsEditMode(false);
-  };
-
-  // Handle delete
-  const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete your profile?")) return;
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/influencers/me`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to delete profile");
-      toast.success("Profile deleted successfully!");
-      reset({
-        handle: "",
-        bio: "",
-        categories: [],
-        followerCount: 0,
-        instagram: "",
-        youtube: "",
-        twitter: "",
-        tiktok: "",
-        other: "",
-        location: "",
-        avatarUrl: "",
-        portfolio: [],
-        tags: [],
-        averageEngagementRate: 0,
-        pricing: {},
-      });
-      setAvatarPreview(null);
-      setIsEditMode(true);
-    } catch (err: any) {
-      toast.error(err.message || "Could not delete profile");
-    }
-  };
 
   // Format followers count
   const formatFollowers = useCallback((count: number) => {
